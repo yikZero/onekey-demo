@@ -129,7 +129,7 @@ export default function FlowPage() {
           </p>
           <div className="space-y-2 rounded-lg bg-red-50 p-3">
             <span className="font-medium text-red-800 text-xs">
-              人工拒绝（等待期内可操作）
+              人工拒绝（等待中 / 待发放时可操作）
             </span>
             <div className="flex flex-wrap gap-2">
               <Node icon={ShieldAlert} label="填写拒绝理由" />
@@ -140,7 +140,7 @@ export default function FlowPage() {
 
         <Arrow />
 
-        {/* Phase 5: 每月10号发放 */}
+        {/* Phase 5: 手动发放 */}
         <div className="rounded-xl border p-4">
           <div className="mb-3 flex items-center gap-2">
             <Send className="size-4" />

@@ -466,12 +466,9 @@ export default function RedeemPage() {
                     </div>
                     <h3 className="font-semibold text-lg">兑换成功</h3>
                     <p className="text-center text-muted-foreground text-sm">
-                      您的 ≈ $20.00 等额 cbBTC (Base) 将在
+                      您的 ≈ $20.00 等额 cbBTC (Base)
                       <br />
-                      <span className="font-medium text-foreground">
-                        2026-06-10
-                      </span>{' '}
-                      发放到您的钱包
+                      将在 30 天退货期满后发放到您的钱包
                     </p>
                     <Card className="w-full">
                       <CardContent className="p-3 text-center text-muted-foreground text-xs">
@@ -532,15 +529,19 @@ export default function RedeemPage() {
                       <div className="flex items-center gap-3 text-muted-foreground text-xs">
                         <span className="font-mono">{item.code}</span>
                       </div>
-                      {(item.status === 'waiting' ||
-                        item.status === 'pendingPayout' ||
-                        item.status === 'snapshotted') && (
-                        <p
-                          className={`text-xs ${item.status === 'waiting' ? 'text-yellow-600' : item.status === 'snapshotted' ? 'text-indigo-600' : 'text-blue-600'}`}
-                        >
-                          {item.status === 'snapshotted'
-                            ? '已纳入快照，等待打款'
-                            : `预计 ${item.date} 发放`}
+                      {item.status === 'waiting' && (
+                        <p className="text-xs text-yellow-600">
+                          退货期满日 {item.date}，届时进入待发放
+                        </p>
+                      )}
+                      {item.status === 'pendingPayout' && (
+                        <p className="text-blue-600 text-xs">
+                          退货期已满，等待运营发放
+                        </p>
+                      )}
+                      {item.status === 'snapshotted' && (
+                        <p className="text-indigo-600 text-xs">
+                          已纳入快照，等待打款
                         </p>
                       )}
                       {item.status === 'completed' && (

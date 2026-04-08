@@ -108,7 +108,7 @@ XXXX-XXXX-XXXX-XXXX（16 位 Base32，约 80 位熵）
 | 功能 | 说明 |
 |------|------|
 | 搜索 | 按兑换码 / 关联订单号 / 收款地址精确搜索 |
-| 筛选 | 按活动（下拉）、按状态（未使用 / 等待中 / 待发放 / 已发放 / 已拒绝 / 已作废）、按时间范围 |
+| 筛选 | 按活动（下拉）、按状态（未使用 / 等待中 / 待发放 / 发放中 / 已发放 / 已拒绝 / 已作废）、按时间范围 |
 | 列表字段 | 兑换码、所属活动、奖励金额（USD）、收款地址（缩略）、状态、提交时间 |
 | 操作列 | 未使用 -> 作废（二次确认）；已兑换 -> 详情 |
 
@@ -237,7 +237,7 @@ const MOCK_RECORDS = [
     address: '0x1a2B3c4D5e6F7a8B9c0D1e2F3a4B5c6D7e8F9a0B',
     status: 'waiting' as const,
     submitTime: '2026-04-08 14:30',
-    estimatedDate: '2026-06-10',
+    estimatedDate: '2026-05-08',
   },
   {
     code: 'SM26-G7H8-J9K0-L1M2',
@@ -248,9 +248,9 @@ const MOCK_RECORDS = [
     btcPrice: '93,897.00',
     address: '0x5e6F7a8B9c0D1e2F3a4B5c6D7e8F9a0B1c2D3e4F',
     status: 'completed' as const,
-    submitTime: '2026-02-01 10:15',
-    estimatedDate: '2026-04-10',
-    actualDate: '2026-04-10 09:30',
+    submitTime: '2026-04-02 10:15',
+    estimatedDate: '2026-05-02',
+    actualDate: '2026-05-10 09:30',
     txHash: '0xabc123def456789...a1b2c3',
   },
   {
@@ -291,6 +291,18 @@ const MOCK_RECORDS = [
     status: 'pendingPayout' as const,
     submitTime: '2026-03-15 16:20',
     estimatedDate: '2026-05-10',
+  },
+  {
+    code: 'CES6-M1N2-P3Q4-R5S6',
+    campaign: 'CES 2026 展会',
+    orderId: 'FIX-CES2026-002',
+    usd: 20,
+    cbbtc: '0.000218',
+    btcPrice: '91,743.00',
+    address: '0x2b3C4d5E6f7A8b9C0d1E2f3A4b5C6d7E8f9A0b1C',
+    status: 'snapshotted' as const,
+    submitTime: '2026-03-01 14:00',
+    estimatedDate: '2026-03-31',
   },
   {
     code: 'SM26-P1Q2-R3S4-T5U6',
