@@ -51,7 +51,7 @@ const DASHBOARD_PROMPT = `你是一个全栈工程师，现在需要实现 OneKe
 ## 背景
 OneKey 大促活动赠送等额 BTC，运营后台用于管理活动、兑换码、兑换记录和发放。
 不关联 Shopify 优惠码，不区分订单码/自由码，所有码统一管理。
-发放参照返佣流程：运营手动设定发放周期，30 天退货期满后即可纳入快照 → 手动打款 → 上传 CSV。
+发放参照返佣流程：默认每月 10 号，可手动调整。批次范围自动衔接不重叠。30 天退货期满后纳入快照 → 导出 CSV → 手动打款 → 上传 CSV 回填 TX hash。
 
 ## 页面一：活动管理
 
@@ -144,7 +144,7 @@ XXXX-XXXX-XXXX-XXXX（16 位 Base32，约 80 位熵）
 ## 页面三：发放管理
 
 ### 发放周期列表
-运营手动创建发放批次，自定义发放日期和范围。参照返佣发放流程。
+默认每月 10 号发放，可手动调整日期。批次范围自动衔接上一批次结束日期，不重叠。参照返佣发放流程。
 
 | 功能 | 说明 |
 |------|------|
@@ -168,8 +168,8 @@ XXXX-XXXX-XXXX-XXXX（16 位 Base32，约 80 位熵）
 所有码均需关联订单。活动赠码等场景由后端预关联固定订单，用户无需手动输入。
 
 ## 关键业务逻辑
-- 发放时间：运营手动设定，参照返佣流程，快照 → 导出 CSV → 手动打款 → 上传 CSV
-- 发放条件：兑换提交 30 天退货期满后即可纳入发放
+- 发放时间：默认每月 10 号，可手动调整，参照返佣流程，快照 → 导出 CSV → 手动打款 → 上传 CSV 回填 TX hash
+- 发放条件：兑换提交 30 天退货期满后纳入发放，批次范围自动衔接不重叠
 - 兑换码格式：XXXX-XXXX-XXXX-XXXX（16 位 Base32），可选自定义前 4 位
 - 兑换码有效期：默认 1 年，从生成时间起算
 - 订单关联：所有码均需关联订单，活动赠码由后端预关联固定订单
@@ -1101,8 +1101,8 @@ export default function DashboardPage() {
               <div>
                 <h2 className="font-semibold text-lg">发放管理</h2>
                 <p className="text-muted-foreground text-sm">
-                  运营手动创建发放批次、设定范围，生成快照后导出 CSV
-                  手动打款，再上传 CSV 回填 TX hash。参照返佣发放流程。
+                  默认每月 10
+                  号发放，可手动调整。创建批次时自动衔接上一批次的结束时间，范围不重叠。
                 </p>
               </div>
               <Dialog>
@@ -1114,26 +1114,49 @@ export default function DashboardPage() {
                   <DialogHeader>
                     <DialogTitle>新建发放批次</DialogTitle>
                     <DialogDescription>
-                      设定兑换时间范围，系统将筛选该范围内 30
-                      天退货期已满的待发放码。
+                      系统自动衔接上一批次结束日期，避免范围重叠。筛选该范围内
+                      30 天退货期已满的待发放码。
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-3">
                     <div className="grid gap-1.5">
                       <span className="font-medium text-sm">批次名称</span>
-                      <Input placeholder="如：5 月第 1 批" />
+                      <Input
+                        placeholder="如：6 月第 1 批"
+                        defaultValue="6 月第 1 批"
+                      />
                     </div>
                     <div className="grid gap-1.5">
                       <span className="font-medium text-sm">
                         兑换时间范围（筛选条件）
                       </span>
                       <div className="flex items-center gap-2">
-                        <Input type="date" className="flex-1" />
+                        <Input
+                          type="date"
+                          className="flex-1"
+                          defaultValue="2026-05-01"
+                        />
                         <span className="text-muted-foreground text-sm">~</span>
-                        <Input type="date" className="flex-1" />
+                        <Input
+                          type="date"
+                          className="flex-1"
+                          defaultValue="2026-05-31"
+                        />
                       </div>
                       <p className="text-muted-foreground text-xs">
-                        筛选在此范围内兑换且 30 天退货期已满的码
+                        自动从上一批次结束日期 (2026-04-30)
+                        的次日开始，可手动调整
+                      </p>
+                    </div>
+                    <div className="grid gap-1.5">
+                      <span className="font-medium text-sm">发放日期</span>
+                      <Input
+                        type="date"
+                        className="w-44"
+                        defaultValue="2026-06-10"
+                      />
+                      <p className="text-muted-foreground text-xs">
+                        默认为范围结束月份的次月 10 号，可手动调整
                       </p>
                     </div>
                   </div>
