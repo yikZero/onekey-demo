@@ -1,7 +1,6 @@
 'use client'
 
 import {
-  ArrowLeft,
   Ban,
   Check,
   Copy,
@@ -10,8 +9,8 @@ import {
   Plus,
   Search,
 } from 'lucide-react'
-import Link from 'next/link'
 import { useState } from 'react'
+import { NavHeader } from '@/components/nav-header'
 import { PromptCopy } from '@/components/prompt-copy'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -235,7 +234,7 @@ const INITIAL_CAMPAIGNS: Campaign[] = [
 
 const MOCK_RECORDS = [
   {
-    code: 'SM26-ABCD-EF12',
+    code: 'SM26-A1B2-C3D4-E5F6',
     campaign: '2026 夏季大促',
     type: '订单码' as const,
     orderId: 'ORD-20260601-001',
@@ -248,7 +247,7 @@ const MOCK_RECORDS = [
     estimatedDate: '2026-05-08',
   },
   {
-    code: 'SM26-GHIJ-KL34',
+    code: 'SM26-G7H8-J9K0-L1M2',
     campaign: '2026 夏季大促',
     type: '订单码' as const,
     orderId: 'ORD-20260601-002',
@@ -263,7 +262,7 @@ const MOCK_RECORDS = [
     txHash: '0xabc123def456789...a1b2c3',
   },
   {
-    code: 'SM26-MNOP-QR56',
+    code: 'SM26-N3P4-Q5R6-S7T8',
     campaign: '2026 夏季大促',
     type: '订单码' as const,
     orderId: 'ORD-20260601-003',
@@ -278,7 +277,7 @@ const MOCK_RECORDS = [
     rejectTime: '2026-03-20 16:45',
   },
   {
-    code: 'CES6-STUV-WX78',
+    code: 'CES6-U9V0-W1X2-Y3Z4',
     campaign: 'CES 2026 展会',
     type: '自由码' as const,
     orderId: '',
@@ -293,7 +292,7 @@ const MOCK_RECORDS = [
     txHash: '0xdef789abc123456...d4e5f6',
   },
   {
-    code: 'KOL3-YZAB-CD90',
+    code: 'KOL3-A5B6-C7D8-E9F0',
     campaign: 'KOL 张三合作',
     type: '自由码' as const,
     orderId: '',
@@ -306,7 +305,7 @@ const MOCK_RECORDS = [
     estimatedDate: '2026-05-05',
   },
   {
-    code: 'SM26-PQRS-TU01',
+    code: 'SM26-P1Q2-R3S4-T5U6',
     campaign: '2026 夏季大促',
     type: '订单码' as const,
     orderId: '',
@@ -318,7 +317,7 @@ const MOCK_RECORDS = [
     submitTime: '',
   },
   {
-    code: 'SM26-VWXY-ZA02',
+    code: 'SM26-V7W8-X9Y0-Z1A2',
     campaign: '2026 夏季大促',
     type: '订单码' as const,
     orderId: '',
@@ -330,7 +329,7 @@ const MOCK_RECORDS = [
     submitTime: '',
   },
   {
-    code: 'FREE-BCDE-FG03',
+    code: 'FREE-B3C4-D5E6-F7G8',
     campaign: 'CES 2026 展会',
     type: '自由码' as const,
     orderId: '',
@@ -741,6 +740,7 @@ const MOCK_BATCHES = [
     type: '订单码',
     model: 'Classic 1S',
     usd: 20,
+    prefix: 'SM26',
   },
   {
     id: 2,
@@ -749,6 +749,7 @@ const MOCK_BATCHES = [
     type: '订单码',
     model: 'Pro',
     usd: 50,
+    prefix: 'SM26',
   },
   {
     id: 3,
@@ -756,6 +757,7 @@ const MOCK_BATCHES = [
     date: '2026-06-01',
     type: '自由码',
     model: '',
+    prefix: '',
     usd: 20,
   },
 ]
@@ -846,6 +848,7 @@ function CampaignDetailDialog({ campaign }: { campaign: Campaign }) {
                   <TableHead className="h-8 text-xs">批次</TableHead>
                   <TableHead className="h-8 text-xs">机型</TableHead>
                   <TableHead className="h-8 text-xs">金额</TableHead>
+                  <TableHead className="h-8 text-xs">前 4 位</TableHead>
                   <TableHead className="h-8 text-xs">类型</TableHead>
                   <TableHead className="h-8 text-right text-xs">数量</TableHead>
                   <TableHead className="h-8 text-xs">生成时间</TableHead>
@@ -863,6 +866,9 @@ function CampaignDetailDialog({ campaign }: { campaign: Campaign }) {
                     </TableCell>
                     <TableCell className="py-1.5 font-semibold text-xs">
                       ${batch.usd}
+                    </TableCell>
+                    <TableCell className="py-1.5 font-mono text-xs">
+                      {batch.prefix || '—'}
                     </TableCell>
                     <TableCell className="py-1.5">
                       <Badge variant="outline" className="text-[10px]">
@@ -901,18 +907,10 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-6">
-          <Link
-            href="/"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="size-4" />
-          </Link>
-          <h1 className="flex-1 font-semibold text-lg">运营 Dashboard Demo</h1>
-          <PromptCopy title="复制开发提示词" prompt={DASHBOARD_PROMPT} />
-        </div>
-      </header>
+      <NavHeader />
+      <div className="mx-auto flex max-w-7xl items-center justify-end px-6 py-2">
+        <PromptCopy title="复制开发提示词" prompt={DASHBOARD_PROMPT} />
+      </div>
 
       <main className="mx-auto max-w-7xl space-y-8 px-6 py-8">
         <Tabs defaultValue="campaigns">

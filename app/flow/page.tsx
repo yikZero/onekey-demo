@@ -1,6 +1,5 @@
 import {
   ArrowDown,
-  ArrowLeft,
   Ban,
   Check,
   Clock,
@@ -15,7 +14,7 @@ import {
   Truck,
   Undo2,
 } from 'lucide-react'
-import Link from 'next/link'
+import { NavHeader } from '@/components/nav-header'
 
 function Arrow() {
   return (
@@ -43,17 +42,7 @@ function Node({
 export default function FlowPage() {
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-3xl items-center gap-3 px-6">
-          <Link
-            href="/"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="size-4" />
-          </Link>
-          <h1 className="font-semibold text-lg">整体逻辑流程</h1>
-        </div>
-      </header>
+      <NavHeader />
 
       <main className="mx-auto max-w-xl px-6 py-8">
         {/* Phase 1: 创建活动 */}

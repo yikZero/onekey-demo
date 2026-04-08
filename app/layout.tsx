@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'OneKey BTC 奖励 Demo',
-  description: '大促活动 BTC 奖励方案 — 兑换码与运营 Dashboard Demo',
+  title: 'OneKey BTC 奖励兑换系统',
+  description:
+    '为促销活动设计的 BTC 奖励兑换系统 — 流程图、运营 Dashboard、客户端兑换 Demo',
 }
 
 export default function RootLayout({

@@ -1,7 +1,6 @@
 'use client'
 
 import {
-  ArrowLeft,
   Check,
   CheckCircle2,
   ChevronRight,
@@ -11,8 +10,8 @@ import {
   Wallet,
   XCircle,
 } from 'lucide-react'
-import Link from 'next/link'
 import { useState } from 'react'
+import { NavHeader } from '@/components/nav-header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -31,7 +30,7 @@ const MOCK_WALLETS = [
 
 const MOCK_HISTORY = [
   {
-    code: 'SM26-ABCD-EF12',
+    code: 'SM26-A1B2-C3D4-E5F6',
     product: 'OneKey Classic 1S',
     usd: 20,
     btc: '0.000213',
@@ -40,7 +39,7 @@ const MOCK_HISTORY = [
     address: '0x1a2B...9cD4',
   },
   {
-    code: 'SM26-GHIJ-KL34',
+    code: 'SM26-G7H8-J9K0-L1M2',
     product: 'OneKey Pro',
     usd: 50,
     btc: '0.000533',
@@ -50,7 +49,7 @@ const MOCK_HISTORY = [
     txHash: '0xabc...def',
   },
   {
-    code: 'SM26-MNOP-QR56',
+    code: 'SM26-N3P4-Q5R6-S7T8',
     product: 'OneKey Classic',
     usd: 15,
     btc: '0.000160',
@@ -87,17 +86,7 @@ export default function RedeemPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-6">
-          <Link
-            href="/"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="size-4" />
-          </Link>
-          <h1 className="font-semibold text-lg">兑换码 Demo</h1>
-        </div>
-      </header>
+      <NavHeader />
 
       <main className="mx-auto max-w-5xl space-y-10 px-6 py-8">
         {/* 实体兑换卡 */}
@@ -138,7 +127,7 @@ export default function RedeemPage() {
                       刮开涂层获取兑换码
                     </div>
                     <div className="rounded-md bg-stone-300 px-4 py-3 font-mono text-lg text-stone-300 leading-none tracking-[0.2em]">
-                      XXXX - XXXX - XXXX
+                      XXXX - XXXX - XXXX - XXXX
                     </div>
                   </div>
                   <div className="mt-4 text-[11px] text-stone-400">
@@ -267,7 +256,7 @@ export default function RedeemPage() {
                       </p>
                     </div>
                     <Input
-                      placeholder="XXXX-XXXX-XXXX"
+                      placeholder="XXXX-XXXX-XXXX-XXXX"
                       value={code}
                       onChange={(e) => setCode(e.target.value)}
                       className="text-center font-mono text-lg tracking-widest"
@@ -292,7 +281,7 @@ export default function RedeemPage() {
                           </div>
                           <div className="space-y-0.5 text-green-700 text-xs">
                             {isOrderCode && <p>产品：OneKey Classic 1S</p>}
-                            <p>奖励：≈ $20.00 等额 BTC</p>
+                            <p>奖励：≈ $20.00 等额 cbBTC (Base)</p>
                           </div>
                           <p className="mt-1.5 text-[10px] text-green-600/70">
                             预估金额，最终以确认提交时价格锁定
@@ -350,14 +339,14 @@ export default function RedeemPage() {
                           ≈ $20.00
                         </div>
                         <div className="text-muted-foreground text-xs">
-                          等额 BTC 奖励
+                          cbBTC (Base)
                         </div>
                       </CardContent>
                     </Card>
 
                     <div>
                       <h4 className="mb-2 font-medium text-sm">
-                        您的 BTC 将发送到哪个地址？
+                        您的 cbBTC 将发送到哪个地址？
                       </h4>
                       <div className="space-y-2">
                         {MOCK_WALLETS.map((wallet, i) => (
@@ -429,7 +418,7 @@ export default function RedeemPage() {
                       <CardContent className="space-y-3 p-4 text-sm">
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">兑换码</span>
-                          <span className="font-mono">SM26-ABCD-EF12</span>
+                          <span className="font-mono">SM26-A1B2-C3D4-E5F6</span>
                         </div>
                         {isOrderCode && (
                           <>
@@ -502,7 +491,7 @@ export default function RedeemPage() {
                     </div>
                     <h3 className="font-semibold text-lg">兑换成功</h3>
                     <p className="text-center text-muted-foreground text-sm">
-                      您的 ≈ $20.00 等额 BTC 将在
+                      您的 ≈ $20.00 等额 cbBTC (Base) 将在
                       <br />
                       <span className="font-medium text-foreground">
                         2026-05-08
@@ -587,7 +576,7 @@ export default function RedeemPage() {
                     <div className="text-right">
                       <div className="font-semibold text-sm">${item.usd}</div>
                       <div className="font-mono text-muted-foreground text-xs">
-                        {item.btc} BTC
+                        {item.btc} cbBTC
                       </div>
                     </div>
                   </CardContent>
