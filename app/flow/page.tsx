@@ -1,9 +1,11 @@
 import {
   ArrowDown,
   Ban,
+  Calendar,
   Check,
   Clock,
   Factory,
+  FileSpreadsheet,
   FileText,
   Gift,
   Package,
@@ -11,8 +13,7 @@ import {
   Settings,
   ShieldAlert,
   Smartphone,
-  Truck,
-  Undo2,
+  Upload,
 } from 'lucide-react'
 import { NavHeader } from '@/components/nav-header'
 
@@ -89,8 +90,7 @@ export default function FlowPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Node icon={Gift} label="印刷兑换卡" />
-            <Node icon={Package} label="促销订单塞卡" />
-            <Node icon={Truck} label="自由码直接分发" />
+            <Node icon={Package} label="塞入产品包装" />
           </div>
         </div>
 
@@ -103,25 +103,15 @@ export default function FlowPage() {
             <span className="font-semibold text-sm">用户兑换</span>
             <span className="text-muted-foreground text-xs">客户端</span>
           </div>
-          <div className="mb-3 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
             <Node icon={Gift} label="输入兑换码" />
+            <Node icon={FileText} label="输入订单号" />
+            <Node icon={Check} label="验证订单 + 建立映射" />
+            <Node icon={Smartphone} label="选地址 → 确认兑换" />
           </div>
-          <div className="grid gap-2 md:grid-cols-2">
-            <div className="space-y-2 rounded-lg bg-muted/50 p-3">
-              <span className="font-medium text-xs">订单码</span>
-              <div className="flex flex-wrap gap-2">
-                <Node icon={FileText} label="输入订单号" />
-                <Node icon={Check} label="验证 + 建立映射" />
-                <Node icon={Smartphone} label="选地址 → 确认" />
-              </div>
-            </div>
-            <div className="space-y-2 rounded-lg bg-muted/50 p-3">
-              <span className="font-medium text-xs">自由码</span>
-              <div className="flex flex-wrap gap-2">
-                <Node icon={Smartphone} label="选地址 → 确认" />
-              </div>
-            </div>
-          </div>
+          <p className="mt-2 text-muted-foreground text-xs">
+            所有码均需关联订单。活动赠码等场景由后端预关联固定订单，用户无需手动输入。
+          </p>
         </div>
 
         <Arrow />
@@ -130,43 +120,47 @@ export default function FlowPage() {
         <div className="rounded-xl border p-4">
           <div className="mb-3 flex items-center gap-2">
             <Clock className="size-4" />
-            <span className="font-semibold text-sm">等待期 30 天</span>
+            <span className="font-semibold text-sm">
+              等待期（30 天退货期 + 次月 10 号）
+            </span>
             <span className="text-muted-foreground text-xs">后端</span>
           </div>
-          <div className="grid gap-2 md:grid-cols-2">
-            <div className="space-y-2 rounded-lg bg-red-50 p-3">
-              <span className="font-medium text-red-800 text-xs">
-                退款拒绝（订单码）
-              </span>
-              <div className="flex flex-wrap gap-2">
-                <Node icon={Undo2} label="Shopify Webhook" />
-                <Node icon={Ban} label="自动拒绝对应码" />
-              </div>
-            </div>
-            <div className="space-y-2 rounded-lg bg-red-50 p-3">
-              <span className="font-medium text-red-800 text-xs">人工拒绝</span>
-              <div className="flex flex-wrap gap-2">
-                <Node icon={ShieldAlert} label="填写理由" />
-                <Node icon={Ban} label="二次确认拒绝" />
-              </div>
+          <p className="mb-3 text-muted-foreground text-xs">
+            兑换提交后进入 30 天退货期，退货期结束后的次月 10
+            号才符合发放条件。例如：4 月 8 日兑换 → 5 月 8 日退货期满 → 6 月 10
+            日发放。
+          </p>
+          <div className="space-y-2 rounded-lg bg-red-50 p-3">
+            <span className="font-medium text-red-800 text-xs">
+              人工拒绝（等待期内可操作）
+            </span>
+            <div className="flex flex-wrap gap-2">
+              <Node icon={ShieldAlert} label="填写拒绝理由" />
+              <Node icon={Ban} label="二次确认拒绝" />
             </div>
           </div>
         </div>
 
         <Arrow />
 
-        {/* Phase 5: 发放 */}
+        {/* Phase 5: 每月10号发放 */}
         <div className="rounded-xl border p-4">
           <div className="mb-3 flex items-center gap-2">
             <Send className="size-4" />
-            <span className="font-semibold text-sm">自动发放</span>
-            <span className="text-muted-foreground text-xs">后端</span>
+            <span className="font-semibold text-sm">每月 10 号手动发放</span>
+            <span className="text-muted-foreground text-xs">运营</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Node icon={Check} label="到期 + 未退款 + 未拒绝" />
-            <Node icon={Send} label="发放 BTC" />
-            <Node icon={Smartphone} label="推送通知" />
+            <Node icon={Calendar} label="10 号快照符合条件的码" />
+            <Node icon={FileSpreadsheet} label="导出发放 CSV" />
+            <Node icon={Send} label="手动打款 BTC" />
+            <Node icon={Upload} label="上传已发放 CSV" />
+            <Node icon={Smartphone} label="推送到账通知" />
           </div>
+          <p className="mt-2 text-muted-foreground text-xs">
+            参照返佣发放流程：每月 10
+            号生成快照，导出待发放列表，手动完成链上转账后上传 CSV 更新状态。
+          </p>
         </div>
 
         {/* 码状态流转 */}
@@ -180,6 +174,10 @@ export default function FlowPage() {
               <span className="text-muted-foreground">→</span>
               <span className="rounded-full bg-yellow-100 px-2.5 py-1 font-medium text-yellow-800">
                 等待中
+              </span>
+              <span className="text-muted-foreground">→</span>
+              <span className="rounded-full bg-blue-100 px-2.5 py-1 font-medium text-blue-800">
+                待发放
               </span>
               <span className="text-muted-foreground">→</span>
               <span className="rounded-full bg-green-100 px-2.5 py-1 font-medium text-green-800">
@@ -199,6 +197,10 @@ export default function FlowPage() {
                 已作废
               </span>
             </div>
+            <p className="mt-1 text-muted-foreground text-xs">
+              等待中：30 天退货期内 · 待发放：退货期满，等待次月 10 号快照发放 ·
+              已发放：CSV 上传确认后
+            </p>
           </div>
         </div>
       </main>

@@ -35,8 +35,17 @@ const MOCK_HISTORY = [
     usd: 20,
     btc: '0.000213',
     status: 'waiting' as const,
-    date: '2026-05-08',
+    date: '2026-06-10',
     address: '0x1a2B...9cD4',
+  },
+  {
+    code: 'KOL3-A5B6-C7D8-E9F0',
+    product: 'OneKey Touch',
+    usd: 30,
+    btc: '0.000320',
+    status: 'pendingPayout' as const,
+    date: '2026-05-10',
+    address: '0x3c4D...1c2D',
   },
   {
     code: 'SM26-G7H8-J9K0-L1M2',
@@ -44,7 +53,7 @@ const MOCK_HISTORY = [
     usd: 50,
     btc: '0.000533',
     status: 'completed' as const,
-    date: '2026-04-01',
+    date: '2026-04-10',
     address: '0x5e6F...3aB8',
     txHash: '0xabc...def',
   },
@@ -66,8 +75,13 @@ const STATUS_MAP = {
     color: 'bg-yellow-100 text-yellow-800',
     icon: Clock,
   },
+  pendingPayout: {
+    label: '待发放',
+    color: 'bg-blue-100 text-blue-800',
+    icon: Clock,
+  },
   completed: {
-    label: '已完成',
+    label: '已发放',
     color: 'bg-green-100 text-green-800',
     icon: CheckCircle2,
   },
@@ -81,8 +95,9 @@ const STATUS_MAP = {
 export default function RedeemPage() {
   const [step, setStep] = useState(0)
   const [code, setCode] = useState('')
-  const [isOrderCode, setIsOrderCode] = useState(true)
   const [selectedWallet, setSelectedWallet] = useState<number | null>(null)
+
+  const steps = ['输入兑换码', '验证订单', '选择地址', '确认兑换', '兑换成功']
 
   return (
     <div className="min-h-screen bg-background">
@@ -170,70 +185,34 @@ export default function RedeemPage() {
         <section>
           <h2 className="mb-4 font-semibold text-xl">客户端兑换流程</h2>
 
-          {/* 码类型切换 */}
-          <div className="mb-4 flex items-center gap-2">
-            <span className="text-muted-foreground text-sm">模拟码类型：</span>
-            <button
-              type="button"
-              onClick={() => {
-                setIsOrderCode(true)
-                setStep(0)
-                setCode('')
-                setSelectedWallet(null)
-              }}
-              className={`rounded-full px-3 py-1 font-medium text-xs transition-colors ${isOrderCode ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
-            >
-              订单码
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setIsOrderCode(false)
-                setStep(0)
-                setCode('')
-                setSelectedWallet(null)
-              }}
-              className={`rounded-full px-3 py-1 font-medium text-xs transition-colors ${!isOrderCode ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
-            >
-              自由码
-            </button>
-          </div>
-
           {/* 步骤指示器 */}
-          {(() => {
-            const steps = isOrderCode
-              ? ['输入兑换码', '验证订单', '选择地址', '确认兑换', '兑换成功']
-              : ['输入兑换码', '选择地址', '确认兑换', '兑换成功']
-            return (
-              <div className="mb-6 flex flex-wrap items-center gap-2">
-                {steps.map((label, i) => (
-                  <div key={label} className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setStep(i)}
-                      className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 font-medium text-xs transition-colors ${
-                        step === i
-                          ? 'bg-primary text-primary-foreground'
-                          : step > i
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-muted text-muted-foreground'
-                      }`}
-                    >
-                      {step > i ? (
-                        <Check className="size-3" />
-                      ) : (
-                        <span>{i + 1}</span>
-                      )}
-                      {label}
-                    </button>
-                    {i < steps.length - 1 && (
-                      <ChevronRight className="size-3.5 text-muted-foreground" />
-                    )}
-                  </div>
-                ))}
+          <div className="mb-6 flex flex-wrap items-center gap-2">
+            {steps.map((label, i) => (
+              <div key={label} className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStep(i)}
+                  className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 font-medium text-xs transition-colors ${
+                    step === i
+                      ? 'bg-primary text-primary-foreground'
+                      : step > i
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  {step > i ? (
+                    <Check className="size-3" />
+                  ) : (
+                    <span>{i + 1}</span>
+                  )}
+                  {label}
+                </button>
+                {i < steps.length - 1 && (
+                  <ChevronRight className="size-3.5 text-muted-foreground" />
+                )}
               </div>
-            )
-          })()}
+            ))}
+          </div>
 
           {/* 模拟手机屏幕 */}
           <div className="mx-auto w-full max-w-sm">
@@ -271,16 +250,11 @@ export default function RedeemPage() {
                     {code.trim() && (
                       <Card className="border-green-200 bg-green-50">
                         <CardContent className="p-3 text-sm">
-                          <div className="mb-1 flex items-center gap-2">
-                            <span className="font-medium text-green-800">
-                              验证成功
-                            </span>
-                            <Badge variant="outline" className="text-[10px]">
-                              {isOrderCode ? '订单码' : '自由码'}
-                            </Badge>
+                          <div className="mb-1 font-medium text-green-800">
+                            验证成功
                           </div>
                           <div className="space-y-0.5 text-green-700 text-xs">
-                            {isOrderCode && <p>产品：OneKey Classic 1S</p>}
+                            <p>产品：OneKey Classic 1S</p>
                             <p>奖励：≈ $20.00 等额 cbBTC (Base)</p>
                           </div>
                           <p className="mt-1.5 text-[10px] text-green-600/70">
@@ -292,8 +266,8 @@ export default function RedeemPage() {
                   </div>
                 )}
 
-                {/* Step 1 (订单码): 验证订单 */}
-                {step === 1 && isOrderCode && (
+                {/* Step 1: 验证订单 */}
+                {step === 1 && (
                   <div className="space-y-5">
                     <div className="text-center">
                       <h3 className="font-semibold text-lg">验证订单信息</h3>
@@ -303,12 +277,12 @@ export default function RedeemPage() {
                     </div>
                     <div className="space-y-2">
                       <Input
-                        placeholder="如 #ORD-20260601-001"
-                        defaultValue="#ORD-20260601-001"
+                        placeholder="如 ORD-20260601-001"
+                        defaultValue="ORD-20260601-001"
                         className="font-mono"
                       />
                       <p className="text-muted-foreground text-xs">
-                        订单号可在购买确认邮件或 Shopify 订单页面找到
+                        订单号可在购买确认邮件或订单页面找到
                       </p>
                     </div>
                     <Button className="w-full" onClick={() => setStep(2)}>
@@ -320,7 +294,7 @@ export default function RedeemPage() {
                           订单验证通过
                         </div>
                         <div className="space-y-0.5 text-green-700 text-xs">
-                          <p>订单号：#ORD-20260601-001</p>
+                          <p>订单号：ORD-20260601-001</p>
                           <p>产品：OneKey Classic 1S</p>
                           <p>订单状态：已发货</p>
                         </div>
@@ -329,8 +303,8 @@ export default function RedeemPage() {
                   </div>
                 )}
 
-                {/* 选择收款地址 (订单码 step 2, 自由码 step 1) */}
-                {step === (isOrderCode ? 2 : 1) && (
+                {/* Step 2: 选择收款地址 */}
+                {step === 2 && (
                   <div className="space-y-5">
                     <Card className="border-primary/20 bg-primary/5">
                       <CardContent className="p-3 text-center text-sm">
@@ -393,7 +367,7 @@ export default function RedeemPage() {
 
                     <Button
                       className="w-full"
-                      onClick={() => setStep(isOrderCode ? 3 : 2)}
+                      onClick={() => setStep(3)}
                       disabled={selectedWallet === null}
                     >
                       下一步
@@ -404,8 +378,8 @@ export default function RedeemPage() {
                   </div>
                 )}
 
-                {/* 确认兑换 (订单码 step 3, 自由码 step 2) */}
-                {step === (isOrderCode ? 3 : 2) && (
+                {/* Step 3: 确认兑换 */}
+                {step === 3 && (
                   <div className="space-y-5">
                     <div className="text-center">
                       <h3 className="font-semibold text-lg">确认兑换</h3>
@@ -420,26 +394,16 @@ export default function RedeemPage() {
                           <span className="text-muted-foreground">兑换码</span>
                           <span className="font-mono">SM26-A1B2-C3D4-E5F6</span>
                         </div>
-                        {isOrderCode && (
-                          <>
-                            <Separator />
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">
-                                订单号
-                              </span>
-                              <span className="font-mono">
-                                #ORD-20260601-001
-                              </span>
-                            </div>
-                            <Separator />
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">
-                                产品
-                              </span>
-                              <span>OneKey Classic 1S</span>
-                            </div>
-                          </>
-                        )}
+                        <Separator />
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">订单号</span>
+                          <span className="font-mono">ORD-20260601-001</span>
+                        </div>
+                        <Separator />
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">产品</span>
+                          <span>OneKey Classic 1S</span>
+                        </div>
                         <Separator />
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">
@@ -463,9 +427,9 @@ export default function RedeemPage() {
                         <Separator />
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">
-                            预计到账
+                            预计发放
                           </span>
-                          <span>2026-05-08</span>
+                          <span>2026-06-10（次月 10 号）</span>
                         </div>
                       </CardContent>
                     </Card>
@@ -474,17 +438,14 @@ export default function RedeemPage() {
                       BTC 数量以此刻价格锁定，提交后不可更改收款地址
                     </p>
 
-                    <Button
-                      className="w-full"
-                      onClick={() => setStep(isOrderCode ? 4 : 3)}
-                    >
+                    <Button className="w-full" onClick={() => setStep(4)}>
                       确认兑换
                     </Button>
                   </div>
                 )}
 
-                {/* 成功页 (订单码 step 4, 自由码 step 3) */}
-                {step === (isOrderCode ? 4 : 3) && (
+                {/* Step 4: 成功页 */}
+                {step === 4 && (
                   <div className="flex flex-col items-center justify-center space-y-4 py-8">
                     <div className="grid size-16 place-items-center rounded-full bg-green-100">
                       <Check className="size-8 text-green-600" />
@@ -494,13 +455,13 @@ export default function RedeemPage() {
                       您的 ≈ $20.00 等额 cbBTC (Base) 将在
                       <br />
                       <span className="font-medium text-foreground">
-                        2026-05-08
+                        2026-06-10
                       </span>{' '}
-                      自动发放到您的钱包
+                      发放到您的钱包
                     </p>
                     <Card className="w-full">
                       <CardContent className="p-3 text-center text-muted-foreground text-xs">
-                        <p>无需任何操作，到期自动到账</p>
+                        <p>30 天退货期满后，次月 10 号统一发放</p>
                         <p>可在兑换历史中随时查看进度</p>
                       </CardContent>
                     </Card>
@@ -557,9 +518,12 @@ export default function RedeemPage() {
                       <div className="flex items-center gap-3 text-muted-foreground text-xs">
                         <span className="font-mono">{item.code}</span>
                       </div>
-                      {item.status === 'waiting' && (
-                        <p className="text-xs text-yellow-600">
-                          预计 {item.date} 到账
+                      {(item.status === 'waiting' ||
+                        item.status === 'pendingPayout') && (
+                        <p
+                          className={`text-xs ${item.status === 'waiting' ? 'text-yellow-600' : 'text-blue-600'}`}
+                        >
+                          预计 {item.date} 发放
                         </p>
                       )}
                       {item.status === 'completed' && (

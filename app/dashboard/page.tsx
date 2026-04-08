@@ -2,12 +2,15 @@
 
 import {
   Ban,
+  Calendar,
   Check,
   Copy,
   Download,
   ExternalLink,
+  FileSpreadsheet,
   Plus,
   Search,
+  Upload,
 } from 'lucide-react'
 import { useState } from 'react'
 import { NavHeader } from '@/components/nav-header'
@@ -46,8 +49,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 const DASHBOARD_PROMPT = `你是一个全栈工程师，现在需要实现 OneKey BTC 奖励运营后台（Dashboard）。
 
 ## 背景
-OneKey 大促活动赠送等额 BTC，运营后台用于管理活动、兑换码和兑换记录。
-两个核心页面，系统配置类先手动处理。数据分析通过 Mixpanel 实现，不在 Dashboard 内建看板。
+OneKey 大促活动赠送等额 BTC，运营后台用于管理活动、兑换码、兑换记录和发放。
+不关联 Shopify 优惠码，不区分订单码/自由码，所有码统一管理。
+发放参照返佣流程：每月 10 号，30 天退货期满后的次月 10 号快照 → 手动打款 → 上传 CSV。
 
 ## 页面一：活动管理
 
@@ -56,7 +60,6 @@ OneKey 大促活动赠送等额 BTC，运营后台用于管理活动、兑换码
 |----|------|
 | 活动名称 | 点击进入活动详情 |
 | 创建时间 | 活动创建时间 |
-| 优惠码 | 关联的 Shopify 优惠码，未关联显示"—" |
 | 适用机型 | 各机型及对应奖励金额 |
 | 码统计 | 生成 / 已兑换 / 剩余，分列展示 |
 | 操作 | 编辑（Dialog）/ 兑换码（Dialog，含批次管理和导出 TXT） |
@@ -66,7 +69,6 @@ OneKey 大促活动赠送等额 BTC，运营后台用于管理活动、兑换码
 |------|--------|--------|
 | 活动名称 | 可编辑 | 可编辑 |
 | 活动代码 | 可选，4 位字符（如 SM26），需全局唯一，用作兑换码前 4 位 | 只读 |
-| 关联优惠码 | 可编辑，如 BLACKFRIDAY2025 | 已填写则只读，未填写可补填 |
 | 适用机型 | 下拉选择（Pro / Classic 1S / Classic / Touch）+ 手动输入，可添加多个 | 已有机型只读，仅允许新增 |
 | 各机型奖励金额（USD） | 可编辑，与机型一一对应 | 已有金额只读，新增机型可编辑 |
 
@@ -75,120 +77,111 @@ XXXX-XXXX-XXXX-XXXX（16 位 Base32，约 80 位熵）
 - 默认全随机生成
 - 支持自定义前 4 位（如 SM26），后 12 位随机：SM26-XXXX-XXXX-XXXX
 - 自定义前 4 位在创建活动时设定（活动代码），需全局唯一，可选
-- 无论是否自定义，每个码整体保证唯一
 
 ### 兑换码管理（Dialog，从活动列表的「兑换码」按钮打开）
 
 #### 批量生成
-- 先选码类型（订单码/自由码），联动切换后续字段：
-  - 订单码：选择适用机型（从活动已配置的机型中选，金额自动带出）
-  - 自由码：直接填奖励金额（USD），不绑定机型
-- 再填生成数量
-- 码前缀由活动代码自动带入（如有），无需手动填写
-- 每个码在生成时就绑定了金额（订单码还绑定机型），兑换时无需再判断
+- 选择适用机型（从活动已配置的机型中选，金额自动带出）
+- 填生成数量
+- 码前缀由活动代码自动带入（如有）
+- 每个码在生成时就绑定了机型和金额
 - 同一活动可多次生成，每次生成为一个批次
-- 一单多件产品：每件产品一个码，分别兑换
 
 #### 已生成批次（Table）
 | 列 | 说明 |
 |----|------|
 | 批次编号 | 自增 #1, #2, #3... |
-| 机型 | 订单码显示绑定的机型，自由码显示"—" |
+| 机型 | 绑定的机型 |
 | 金额 | 该批次每码的 USD 奖励金额 |
 | 自定义前 4 位 | 如有自定义则显示，否则显示"—" |
-| 类型 | 订单码 / 自由码 |
 | 数量 | 该批次生成的码数量 |
 | 生成时间 | 批次创建时间 |
 | 操作 | 单批导出 TXT |
 
-右上角有「导出全部 TXT」按钮，导出该活动下所有批次的码。
-
 导出文件命名规范：
-- 单批导出：{活动名}_{机型}_{类型}_{批次号}.txt（如：2026夏促_Classic1S_订单码_#1.txt）
-- 全部导出：{活动名}_全部兑换码.txt（如：2026夏促_全部兑换码.txt）
+- 单批导出：{活动名}_{机型}_{批次号}.txt
+- 全部导出：{活动名}_全部兑换码.txt
 
 ## 页面二：兑换码管理
 
-### 码列表（Table，展示所有码，不仅限于已兑换的）
+### 码列表（Table，展示所有码）
 | 功能 | 说明 |
 |------|------|
-| 搜索 | 按兑换码 / 关联订单号 / 收款地址精确搜索（客服高频操作） |
-| 筛选 | 按活动（下拉）、按状态（未使用 / 等待中 / 已发放 / 已拒绝 / 已作废）、按时间范围 |
-| 列表字段 | 兑换码、所属活动、码类型、奖励金额（USD）、收款地址（缩略）、状态、提交时间 |
-| 操作列 | 未使用 -> 作废（二次确认 Dialog，不可恢复）；已兑换 -> 详情（Dialog） |
+| 搜索 | 按兑换码 / 关联订单号 / 收款地址精确搜索 |
+| 筛选 | 按活动（下拉）、按状态（未使用 / 等待中 / 待发放 / 已发放 / 已拒绝 / 已作废）、按时间范围 |
+| 列表字段 | 兑换码、所属活动、奖励金额（USD）、收款地址（缩略）、状态、提交时间 |
+| 操作列 | 未使用 -> 作废（二次确认）；已兑换 -> 详情 |
 
-码状态流转：未使用 -> 等待中（用户兑换后）-> 已发放（30天后自动）/ 已拒绝（人工或系统自动）
-独立状态：已作废（运营主动作废，不可恢复）
+码状态流转：
+- 未使用 -> 等待中（用户兑换后，30 天退货期内）
+- 等待中 -> 待发放（退货期满，等待次月 10 号）
+- 待发放 -> 已发放（10 号快照后上传 CSV 确认）
+- 等待中/待发放 -> 已拒绝（人工拒绝）
+- 未使用 -> 已作废（运营主动作废，不可恢复）
 
-### 兑换详情（Dialog，点击「详情」按钮打开）
+### 兑换详情（Dialog）
 | 字段 | 显示条件 |
 |------|---------|
 | 兑换码 | 始终显示，可复制 |
 | 所属活动 | 始终显示 |
-| 码类型 | 订单码 / 自由码 |
-| 关联订单号 | 订单码时显示 |
+| 关联订单号 | 始终显示 |
 | 收款地址 | 始终显示，可复制 |
 | 奖励金额（USD） | 始终显示 |
 | 锁定 BTC 数量 | 始终显示 |
 | 锁定时 BTC 价格 | 始终显示 |
 | 状态 | 始终显示 |
 | 提交时间 | 始终显示 |
-| 预计到账日期 | 等待中时显示 |
-| 实际到账时间 | 已发放时显示 |
+| 预计发放日期 | 等待中/待发放时显示（退货期满后的次月 10 号） |
+| 实际发放时间 | 已发放时显示 |
 | 发放 TX hash | 已发放时显示，带区块链浏览器外链 |
 | 拒绝原因 | 已拒绝时显示 |
-| 拒绝来源 | 已拒绝时显示："人工拒绝"或"系统自动（订单退款）" |
 | 拒绝时间 | 已拒绝时显示 |
 
-### 人工拒绝（Dialog，从详情内触发，状态为"等待中"时可用）
+### 人工拒绝（Dialog，状态为"等待中"或"待发放"时可用）
 - 需填写拒绝理由（如：订单已退款 / 疑似欺诈 / 重复兑换）
-- 二次确认后执行，拒绝后 BTC 不会发放给用户
+- 二次确认后执行
 
-### 导出 CSV
-| 导出类型 | 包含字段 |
-|---------|---------|
-| 兑换明细 | 兑换码、所属活动、关联订单号、USD 金额、锁定 BTC 数量、锁定 BTC 价格、收款地址、状态、提交时间、到账时间、TX hash、拒绝原因 |
-| 未使用码 | 兑换码、所属活动、生成时间、状态（未用/已作废） |
-导出范围受当前筛选条件影响。
+## 页面三：发放管理
+
+### 发放周期列表
+每月 10 号为一个发放周期。参照返佣发放流程。
+
+| 功能 | 说明 |
+|------|------|
+| 快照 | 10 号生成当期符合条件的待发放码快照 |
+| 导出 CSV | 导出待发放列表（兑换码、收款地址、cbBTC 数量、USD 金额） |
+| 上传 CSV | 手动打款后，上传包含 TX hash 的 CSV，批量更新状态为"已发放" |
+
+### 发放条件
+- 兑换提交时间 + 30 天 ≤ 快照日期（即退货期已满）
+- 状态为"待发放"
+- 未被人工拒绝
 
 ## 客户端兑换流程（供后端接口设计参考）
 
-### 订单码流程（4 步）
-1. 输入兑换码 -> 后端验证返回码类型（订单码/自由码）+ 活动信息
-2. **验证订单** -> 用户输入订单号，后端验证是否为促销订单、是否已退款（此步建立「订单号 -> 兑换码」映射）
+### 统一流程（4 步）
+1. 输入兑换码 -> 后端验证返回活动信息（机型、USD 金额、BTC 预估数量）
+2. 验证订单 -> 用户输入订单号，后端验证订单有效性，建立映射。预关联订单的码可跳过此步。
 3. 选择收款地址 -> 仅钱包选择器（有私钥的钱包），硬件优先
 4. 确认兑换 -> 锁定 BTC 价格，提交
 
-### 自由码流程（3 步）
-1. 输入兑换码 -> 同上，但跳过订单验证
-2. 选择收款地址
-3. 确认兑换
-
-### API 能力
-| 能力 | 说明 |
-|------|------|
-| 验证兑换码 | 输入码 -> 返回码类型 + 活动信息（机型、USD 金额、BTC 预估数量），无需登录 |
-| 验证订单（订单码） | 输入订单号 -> 验证是否为促销订单、是否已退款 -> 根据码绑定的机型自动匹配订单中的具体商品 -> 建立映射 |
-| 提交兑换 | 提交码 + 收款地址（+ 订单号），附带轻量签名防伪造，无需登录 |
-| 按地址查记录 | 用钱包地址查询兑换记录列表，无需登录 |
-| 按码查状态 | 用兑换码查单条记录状态（备用查询），仅返回状态和预计到账日期，不返回收款地址（防隐私泄露） |
-| 查看兑换详情 | 单条记录详情（状态 / USD 金额 + 锁定 BTC 数量 / 收款地址 / TX hash / 拒绝原因） |
+所有码均需关联订单。活动赠码等场景由后端预关联固定订单，用户无需手动输入。
 
 ## 关键业务逻辑
-- 定时发放任务：30 天等待期到期后自动发放 BTC，发放后推送通知
+- 发放时间：每月 10 号，参照返佣流程，快照 → 导出 CSV → 手动打款 → 上传 CSV
+- 发放条件：兑换提交 30 天退货期满后的次月 10 号
 - 兑换码格式：XXXX-XXXX-XXXX-XXXX（16 位 Base32），可选自定义前 4 位
-- 兑换码有效期：默认 1 年，从生成时间起算，过期自动失效
-- 订单码关联：用户兑换时输入订单号，后端按码的机型自动匹配订单商品建立映射。多设备订单按机型/数量匹配，部分退货只拒绝对应数量的码（临时方案，后续仓库支持出库关联后可去掉此步骤）
-- 自由码：不绑定订单，无退款联动（展会/KOL 等渠道）
+- 兑换码有效期：默认 1 年，从生成时间起算
+- 订单关联：所有码均需关联订单，活动赠码由后端预关联固定订单
+- 不关联 Shopify 优惠码
 
-## V1 不做的（后续按需补充）
+## V1 不做的
 渠道管理、补发码、发放失败重试、系统配置页面、数据看板`
 
 interface Campaign {
   id: number
   name: string
   createdAt: string
-  couponCode: string
   totalCodes: number
   redeemed: number
   remaining: number
@@ -200,7 +193,6 @@ const INITIAL_CAMPAIGNS: Campaign[] = [
     id: 1,
     name: '2026 夏季大促',
     createdAt: '2026-04-01',
-    couponCode: 'SUMMER2026',
     totalCodes: 5000,
     redeemed: 1234,
     remaining: 3766,
@@ -214,7 +206,6 @@ const INITIAL_CAMPAIGNS: Campaign[] = [
     id: 2,
     name: 'CES 2026 展会',
     createdAt: '2025-12-15',
-    couponCode: '',
     totalCodes: 500,
     redeemed: 387,
     remaining: 113,
@@ -224,7 +215,6 @@ const INITIAL_CAMPAIGNS: Campaign[] = [
     id: 3,
     name: 'KOL 张三合作',
     createdAt: '2026-03-20',
-    couponCode: '',
     totalCodes: 100,
     redeemed: 23,
     remaining: 77,
@@ -236,7 +226,6 @@ const MOCK_RECORDS = [
   {
     code: 'SM26-A1B2-C3D4-E5F6',
     campaign: '2026 夏季大促',
-    type: '订单码' as const,
     orderId: 'ORD-20260601-001',
     usd: 20,
     cbbtc: '0.000213',
@@ -244,27 +233,25 @@ const MOCK_RECORDS = [
     address: '0x1a2B3c4D5e6F7a8B9c0D1e2F3a4B5c6D7e8F9a0B',
     status: 'waiting' as const,
     submitTime: '2026-04-08 14:30',
-    estimatedDate: '2026-05-08',
+    estimatedDate: '2026-06-10',
   },
   {
     code: 'SM26-G7H8-J9K0-L1M2',
     campaign: '2026 夏季大促',
-    type: '订单码' as const,
     orderId: 'ORD-20260601-002',
     usd: 50,
     cbbtc: '0.000533',
     btcPrice: '93,897.00',
     address: '0x5e6F7a8B9c0D1e2F3a4B5c6D7e8F9a0B1c2D3e4F',
     status: 'completed' as const,
-    submitTime: '2026-03-01 10:15',
-    estimatedDate: '2026-03-31',
-    actualDate: '2026-04-01 00:05',
+    submitTime: '2026-02-01 10:15',
+    estimatedDate: '2026-04-10',
+    actualDate: '2026-04-10 09:30',
     txHash: '0xabc123def456789...a1b2c3',
   },
   {
     code: 'SM26-N3P4-Q5R6-S7T8',
     campaign: '2026 夏季大促',
-    type: '订单码' as const,
     orderId: 'ORD-20260601-003',
     usd: 20,
     cbbtc: '0.000213',
@@ -273,41 +260,37 @@ const MOCK_RECORDS = [
     status: 'rejected' as const,
     submitTime: '2026-03-15 09:00',
     rejectReason: '订单已退款',
-    rejectSource: '系统自动（订单退款）',
     rejectTime: '2026-03-20 16:45',
   },
   {
     code: 'CES6-U9V0-W1X2-Y3Z4',
     campaign: 'CES 2026 展会',
-    type: '自由码' as const,
-    orderId: '',
+    orderId: 'FIX-CES2026-001',
     usd: 20,
     cbbtc: '0.000215',
     btcPrice: '93,023.00',
     address: '0x9a0B1c2D3e4F5a6B7c8D9e0F1a2B3c4D5e6F7a8B',
     status: 'completed' as const,
-    submitTime: '2026-01-08 11:30',
-    estimatedDate: '2026-02-07',
-    actualDate: '2026-02-07 00:03',
+    submitTime: '2026-01-05 11:30',
+    estimatedDate: '2026-03-10',
+    actualDate: '2026-03-10 10:15',
     txHash: '0xdef789abc123456...d4e5f6',
   },
   {
     code: 'KOL3-A5B6-C7D8-E9F0',
     campaign: 'KOL 张三合作',
-    type: '自由码' as const,
-    orderId: '',
+    orderId: 'FIX-KOL-ZS-001',
     usd: 30,
     cbbtc: '0.000320',
     btcPrice: '93,750.00',
     address: '0x3c4D5e6F7a8B9c0D1e2F3a4B5c6D7e8F9a0B1c2D',
-    status: 'waiting' as const,
-    submitTime: '2026-04-05 16:20',
-    estimatedDate: '2026-05-05',
+    status: 'pendingPayout' as const,
+    submitTime: '2026-03-15 16:20',
+    estimatedDate: '2026-05-10',
   },
   {
     code: 'SM26-P1Q2-R3S4-T5U6',
     campaign: '2026 夏季大促',
-    type: '订单码' as const,
     orderId: '',
     usd: 20,
     cbbtc: '',
@@ -319,7 +302,6 @@ const MOCK_RECORDS = [
   {
     code: 'SM26-V7W8-X9Y0-Z1A2',
     campaign: '2026 夏季大促',
-    type: '订单码' as const,
     orderId: '',
     usd: 50,
     cbbtc: '',
@@ -329,9 +311,8 @@ const MOCK_RECORDS = [
     submitTime: '',
   },
   {
-    code: 'FREE-B3C4-D5E6-F7G8',
+    code: 'CES6-B3C4-D5E6-F7G8',
     campaign: 'CES 2026 展会',
-    type: '自由码' as const,
     orderId: '',
     usd: 20,
     cbbtc: '',
@@ -345,6 +326,10 @@ const MOCK_RECORDS = [
 const STATUS_CONFIG = {
   unused: { label: '未使用', className: 'bg-stone-100 text-stone-600' },
   waiting: { label: '等待中', className: 'bg-yellow-100 text-yellow-800' },
+  pendingPayout: {
+    label: '待发放',
+    className: 'bg-blue-100 text-blue-800',
+  },
   completed: { label: '已发放', className: 'bg-green-100 text-green-800' },
   rejected: { label: '已拒绝', className: 'bg-red-100 text-red-800' },
   voided: {
@@ -352,6 +337,27 @@ const STATUS_CONFIG = {
     className: 'bg-stone-100 text-stone-400 line-through',
   },
 }
+
+const MOCK_PAYOUTS = [
+  {
+    id: 1,
+    period: '2026-04-10',
+    total: 156,
+    totalUsd: 4280,
+    totalBtc: '0.045632',
+    status: 'done' as const,
+    csvUploaded: true,
+  },
+  {
+    id: 2,
+    period: '2026-05-10',
+    total: 203,
+    totalUsd: 5890,
+    totalBtc: '0.062814',
+    status: 'pending' as const,
+    csvUploaded: false,
+  },
+]
 
 function CopyableText({
   text,
@@ -396,12 +402,6 @@ function RecordDetail({ record }: { record: (typeof MOCK_RECORDS)[0] }) {
           <div className="text-muted-foreground">所属活动</div>
           <span className="text-sm">{record.campaign}</span>
         </div>
-        <div>
-          <div className="text-muted-foreground">码类型</div>
-          <Badge variant="outline" className="text-xs">
-            {record.type}
-          </Badge>
-        </div>
         {record.orderId && (
           <div>
             <div className="text-muted-foreground">关联订单号</div>
@@ -438,13 +438,16 @@ function RecordDetail({ record }: { record: (typeof MOCK_RECORDS)[0] }) {
         </div>
       </div>
 
-      {record.status === 'waiting' && (
+      {(record.status === 'waiting' || record.status === 'pendingPayout') && (
         <>
           <Separator />
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-muted-foreground">预计到账</div>
+              <div className="text-muted-foreground">预计发放日期</div>
               <span className="font-medium">{record.estimatedDate}</span>
+              <span className="ml-1.5 text-muted-foreground text-xs">
+                （30 天退货期满后的次月 10 号）
+              </span>
             </div>
             <Dialog>
               <DialogTrigger
@@ -488,7 +491,7 @@ function RecordDetail({ record }: { record: (typeof MOCK_RECORDS)[0] }) {
           <Separator />
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <div className="text-muted-foreground">实际到账时间</div>
+              <div className="text-muted-foreground">实际发放时间</div>
               <span>{record.actualDate}</span>
             </div>
             <div>
@@ -516,10 +519,6 @@ function RecordDetail({ record }: { record: (typeof MOCK_RECORDS)[0] }) {
             <div>
               <div className="text-muted-foreground">拒绝原因</div>
               <span className="text-red-600">{record.rejectReason}</span>
-            </div>
-            <div>
-              <div className="text-muted-foreground">拒绝来源</div>
-              <span>{record.rejectSource}</span>
             </div>
             <div>
               <div className="text-muted-foreground">拒绝时间</div>
@@ -636,9 +635,7 @@ function CampaignFormDialog({
             <span className="font-medium text-sm">活动代码</span>
             {isEdit ? (
               <span className="rounded-lg border bg-muted/50 px-3 py-1.5 font-mono text-muted-foreground text-sm">
-                {campaign.couponCode
-                  ? campaign.name.slice(0, 4).toUpperCase()
-                  : '—'}
+                {campaign.name.slice(0, 4).toUpperCase() || '—'}
               </span>
             ) : (
               <div className="space-y-1">
@@ -651,19 +648,6 @@ function CampaignFormDialog({
                   用作兑换码前 4 位，需全局唯一。不填则全随机。
                 </p>
               </div>
-            )}
-          </div>
-          <div className="grid gap-1.5">
-            <span className="font-medium text-sm">关联优惠码</span>
-            {isEdit && campaign.couponCode ? (
-              <span className="rounded-lg border bg-muted/50 px-3 py-1.5 font-mono text-muted-foreground text-sm">
-                {campaign.couponCode}
-              </span>
-            ) : (
-              <Input
-                defaultValue={campaign?.couponCode}
-                placeholder="Shopify 优惠码，如 BLACKFRIDAY2025"
-              />
             )}
           </div>
           <div className="grid gap-1.5">
@@ -737,7 +721,6 @@ const MOCK_BATCHES = [
     id: 1,
     count: 3000,
     date: '2026-05-20',
-    type: '订单码',
     model: 'Classic 1S',
     usd: 20,
     prefix: 'SM26',
@@ -746,7 +729,6 @@ const MOCK_BATCHES = [
     id: 2,
     count: 1500,
     date: '2026-05-25',
-    type: '订单码',
     model: 'Pro',
     usd: 50,
     prefix: 'SM26',
@@ -755,17 +737,13 @@ const MOCK_BATCHES = [
     id: 3,
     count: 500,
     date: '2026-06-01',
-    type: '自由码',
-    model: '',
+    model: 'Classic 1S',
     prefix: '',
     usd: 20,
   },
 ]
 
 function CampaignDetailDialog({ campaign }: { campaign: Campaign }) {
-  const [codeType, setCodeType] = useState('订单码')
-  const isOrder = codeType === '订单码'
-
   return (
     <Dialog>
       <DialogTrigger className="h-7 rounded-md px-2 text-xs hover:bg-accent hover:text-accent-foreground">
@@ -786,44 +764,20 @@ function CampaignDetailDialog({ campaign }: { campaign: Campaign }) {
           <span className="font-medium text-sm">批量生成兑换码</span>
           <div className="flex flex-wrap items-end gap-2">
             <div className="grid gap-1">
-              <span className="text-muted-foreground text-xs">码类型</span>
-              <Select
-                value={codeType}
-                onValueChange={(v) => v && setCodeType(v)}
-              >
-                <SelectTrigger size="sm" className="w-[90px]">
-                  <SelectValue />
+              <span className="text-muted-foreground text-xs">适用机型</span>
+              <Select defaultValue={campaign.models[0]?.name || ''}>
+                <SelectTrigger size="sm" className="w-[130px]">
+                  <SelectValue placeholder="选择机型" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="订单码">订单码</SelectItem>
-                  <SelectItem value="自由码">自由码</SelectItem>
+                  {campaign.models.map((m) => (
+                    <SelectItem key={m.name} value={m.name}>
+                      {m.name} (${m.usd})
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-            {isOrder ? (
-              <div className="grid gap-1">
-                <span className="text-muted-foreground text-xs">适用机型</span>
-                <Select defaultValue={campaign.models[0]?.name || ''}>
-                  <SelectTrigger size="sm" className="w-[130px]">
-                    <SelectValue placeholder="选择机型" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {campaign.models.map((m) => (
-                      <SelectItem key={m.name} value={m.name}>
-                        {m.name} (${m.usd})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : (
-              <div className="grid gap-1">
-                <span className="text-muted-foreground text-xs">
-                  奖励金额 (USD)
-                </span>
-                <Input placeholder="如 20" type="number" className="w-24" />
-              </div>
-            )}
             <div className="grid gap-1">
               <span className="text-muted-foreground text-xs">数量</span>
               <Input placeholder="如 500" type="number" className="w-20" />
@@ -849,7 +803,6 @@ function CampaignDetailDialog({ campaign }: { campaign: Campaign }) {
                   <TableHead className="h-8 text-xs">机型</TableHead>
                   <TableHead className="h-8 text-xs">金额</TableHead>
                   <TableHead className="h-8 text-xs">前 4 位</TableHead>
-                  <TableHead className="h-8 text-xs">类型</TableHead>
                   <TableHead className="h-8 text-right text-xs">数量</TableHead>
                   <TableHead className="h-8 text-xs">生成时间</TableHead>
                   <TableHead className="h-8 text-right text-xs">操作</TableHead>
@@ -862,18 +815,13 @@ function CampaignDetailDialog({ campaign }: { campaign: Campaign }) {
                       #{batch.id}
                     </TableCell>
                     <TableCell className="py-1.5 text-xs">
-                      {batch.model || '—'}
+                      {batch.model}
                     </TableCell>
                     <TableCell className="py-1.5 font-semibold text-xs">
                       ${batch.usd}
                     </TableCell>
                     <TableCell className="py-1.5 font-mono text-xs">
                       {batch.prefix || '—'}
-                    </TableCell>
-                    <TableCell className="py-1.5">
-                      <Badge variant="outline" className="text-[10px]">
-                        {batch.type}
-                      </Badge>
                     </TableCell>
                     <TableCell className="py-1.5 text-right font-mono text-xs">
                       {batch.count.toLocaleString()}
@@ -917,6 +865,7 @@ export default function DashboardPage() {
           <TabsList>
             <TabsTrigger value="campaigns">活动管理</TabsTrigger>
             <TabsTrigger value="records">兑换码管理</TabsTrigger>
+            <TabsTrigger value="payouts">发放管理</TabsTrigger>
           </TabsList>
 
           {/* 活动管理 */}
@@ -935,7 +884,6 @@ export default function DashboardPage() {
                   <TableRow>
                     <TableHead>活动名称</TableHead>
                     <TableHead>创建时间</TableHead>
-                    <TableHead>优惠码</TableHead>
                     <TableHead>适用机型</TableHead>
                     <TableHead className="text-right">生成</TableHead>
                     <TableHead className="text-right">已兑换</TableHead>
@@ -951,9 +899,6 @@ export default function DashboardPage() {
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-muted-foreground text-sm">
                         {campaign.createdAt}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {campaign.couponCode || '—'}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
@@ -1026,6 +971,7 @@ export default function DashboardPage() {
                   <SelectItem value="全部状态">全部状态</SelectItem>
                   <SelectItem value="未使用">未使用</SelectItem>
                   <SelectItem value="等待中">等待中</SelectItem>
+                  <SelectItem value="待发放">待发放</SelectItem>
                   <SelectItem value="已发放">已发放</SelectItem>
                   <SelectItem value="已拒绝">已拒绝</SelectItem>
                   <SelectItem value="已作废">已作废</SelectItem>
@@ -1048,7 +994,6 @@ export default function DashboardPage() {
                   <TableRow>
                     <TableHead>兑换码</TableHead>
                     <TableHead>活动</TableHead>
-                    <TableHead>类型</TableHead>
                     <TableHead>金额</TableHead>
                     <TableHead>收款地址</TableHead>
                     <TableHead>状态</TableHead>
@@ -1066,11 +1011,6 @@ export default function DashboardPage() {
                         </TableCell>
                         <TableCell className="text-sm">
                           {record.campaign}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-[10px]">
-                            {record.type}
-                          </Badge>
                         </TableCell>
                         <TableCell className="font-semibold">
                           ${record.usd}
@@ -1146,6 +1086,133 @@ export default function DashboardPage() {
                   })}
                 </TableBody>
               </Table>
+            </div>
+          </TabsContent>
+
+          {/* 发放管理 */}
+          <TabsContent value="payouts" className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold text-lg">发放管理</h2>
+                <p className="text-muted-foreground text-sm">
+                  每月 10 号生成快照，导出待发放 CSV，手动打款后上传 CSV
+                  更新状态。参照返佣发放流程。
+                </p>
+              </div>
+            </div>
+
+            {/* 发放条件说明 */}
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <div className="mb-2 font-medium text-sm">发放条件</div>
+              <ul className="space-y-1 text-muted-foreground text-sm">
+                <li>· 兑换提交时间 + 30 天 ≤ 快照日期（即 30 天退货期已满）</li>
+                <li>· 状态为「待发放」，未被人工拒绝</li>
+                <li>
+                  · 示例：4 月 8 日兑换 → 5 月 8 日退货期满 → 6 月 10 日发放
+                </li>
+              </ul>
+            </div>
+
+            {/* 发放周期列表 */}
+            <div className="rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>发放周期</TableHead>
+                    <TableHead className="text-right">待发放数</TableHead>
+                    <TableHead className="text-right">总金额 (USD)</TableHead>
+                    <TableHead className="text-right">总 cbBTC</TableHead>
+                    <TableHead>状态</TableHead>
+                    <TableHead className="text-right">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {MOCK_PAYOUTS.map((payout) => (
+                    <TableRow key={payout.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="size-4 text-muted-foreground" />
+                          {payout.period}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {payout.total}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        ${payout.totalUsd.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm">
+                        {payout.totalBtc}
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={`inline-block rounded-full px-2 py-0.5 font-medium text-[10px] ${
+                            payout.status === 'done'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}
+                        >
+                          {payout.status === 'done' ? '已完成' : '待处理'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          {!payout.csvUploaded && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 gap-1 text-xs"
+                            >
+                              <Calendar className="size-3" />
+                              生成快照
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 gap-1 text-xs"
+                          >
+                            <FileSpreadsheet className="size-3" />
+                            导出 CSV
+                          </Button>
+                          {!payout.csvUploaded && (
+                            <Button size="sm" className="h-7 gap-1 text-xs">
+                              <Upload className="size-3" />
+                              上传 CSV
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* 发放流程说明 */}
+            <div className="rounded-lg border p-4">
+              <div className="mb-2 font-medium text-sm">发放流程</div>
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="rounded-lg bg-muted px-3 py-1.5">
+                  ① 10 号生成快照
+                </span>
+                <span className="text-muted-foreground">→</span>
+                <span className="rounded-lg bg-muted px-3 py-1.5">
+                  ② 导出待发放 CSV
+                </span>
+                <span className="text-muted-foreground">→</span>
+                <span className="rounded-lg bg-muted px-3 py-1.5">
+                  ③ 手动链上打款
+                </span>
+                <span className="text-muted-foreground">→</span>
+                <span className="rounded-lg bg-muted px-3 py-1.5">
+                  ④ 上传含 TX hash 的 CSV
+                </span>
+                <span className="text-muted-foreground">→</span>
+                <span className="rounded-lg bg-muted px-3 py-1.5">
+                  ⑤ 系统更新状态 + 推送通知
+                </span>
+              </div>
             </div>
           </TabsContent>
         </Tabs>
