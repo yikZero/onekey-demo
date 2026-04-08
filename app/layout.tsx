@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import { Geist_Mono } from 'next/font/google'
+import { Geist_Mono, Inter } from 'next/font/google'
 import './globals.css'
 
 const inter = Inter({
@@ -14,8 +13,8 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'my-app',
-  description: '',
+  title: 'OneKey BTC 奖励 Demo',
+  description: '大促活动 BTC 奖励方案 — 兑换码与运营 Dashboard Demo',
 }
 
 export default function RootLayout({
