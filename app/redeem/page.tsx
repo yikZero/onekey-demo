@@ -44,7 +44,7 @@ const MOCK_HISTORY = [
     usd: 30,
     btc: '0.000320',
     status: 'pendingPayout' as const,
-    date: '2026-05-10',
+    date: '2026-04-14',
     address: '0x3c4D...1c2D',
   },
   {

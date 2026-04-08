@@ -50,7 +50,7 @@ const DASHBOARD_PROMPT = `你是一个全栈工程师，现在需要实现 OneKe
 
 ## 背景
 OneKey 大促活动赠送等额 BTC，运营后台用于管理活动、兑换码、兑换记录和发放。
-不关联 Shopify 优惠码，不区分订单码/自由码，所有码统一管理。
+所有码统一管理。
 发放参照返佣流程：运营手动生成快照，一键筛选所有退货期满的待发放码（防重靠状态变更）。导出 CSV → 手动打款 → 上传 CSV 回填 TX hash。
 
 ## 页面一：活动管理
@@ -177,7 +177,6 @@ XXXX-XXXX-XXXX-XXXX（16 位 Base32，约 80 位熵）
 - 兑换码格式：XXXX-XXXX-XXXX-XXXX（16 位 Base32），可选自定义前 4 位
 - 兑换码有效期：默认 1 年，从生成时间起算
 - 订单关联：所有码均需关联订单，活动赠码由后端预关联固定订单
-- 不关联 Shopify 优惠码
 
 ## V1 不做的
 渠道管理、补发码、发放失败重试、系统配置页面、数据看板`
@@ -290,7 +289,7 @@ const MOCK_RECORDS = [
     address: '0x3c4D5e6F7a8B9c0D1e2F3a4B5c6D7e8F9a0B1c2D',
     status: 'pendingPayout' as const,
     submitTime: '2026-03-15 16:20',
-    estimatedDate: '2026-05-10',
+    estimatedDate: '2026-04-14',
   },
   {
     code: 'CES6-M1N2-P3Q4-R5S6',
