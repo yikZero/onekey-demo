@@ -48,6 +48,15 @@ const MOCK_HISTORY = [
     address: '0x3c4D...1c2D',
   },
   {
+    code: 'CES6-U9V0-W1X2-Y3Z4',
+    product: 'OneKey Classic 1S',
+    usd: 20,
+    btc: '0.000215',
+    status: 'snapshotted' as const,
+    date: '2026-05-10',
+    address: '0x9a0B...7a8B',
+  },
+  {
     code: 'SM26-G7H8-J9K0-L1M2',
     product: 'OneKey Pro',
     usd: 50,
@@ -78,6 +87,11 @@ const STATUS_MAP = {
   pendingPayout: {
     label: '待发放',
     color: 'bg-blue-100 text-blue-800',
+    icon: Clock,
+  },
+  snapshotted: {
+    label: '发放中',
+    color: 'bg-indigo-100 text-indigo-800',
     icon: Clock,
   },
   completed: {
@@ -519,11 +533,14 @@ export default function RedeemPage() {
                         <span className="font-mono">{item.code}</span>
                       </div>
                       {(item.status === 'waiting' ||
-                        item.status === 'pendingPayout') && (
+                        item.status === 'pendingPayout' ||
+                        item.status === 'snapshotted') && (
                         <p
-                          className={`text-xs ${item.status === 'waiting' ? 'text-yellow-600' : 'text-blue-600'}`}
+                          className={`text-xs ${item.status === 'waiting' ? 'text-yellow-600' : item.status === 'snapshotted' ? 'text-indigo-600' : 'text-blue-600'}`}
                         >
-                          预计 {item.date} 发放
+                          {item.status === 'snapshotted'
+                            ? '已纳入快照，等待打款'
+                            : `预计 ${item.date} 发放`}
                         </p>
                       )}
                       {item.status === 'completed' && (

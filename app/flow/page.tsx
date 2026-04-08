@@ -124,8 +124,8 @@ export default function FlowPage() {
             <span className="text-muted-foreground text-xs">后端</span>
           </div>
           <p className="mb-3 text-muted-foreground text-xs">
-            兑换提交后进入 30 天退货期，退货期结束后即符合发放条件。默认每月 10
-            号发放，运营可手动调整日期和范围。
+            兑换提交后进入 30
+            天退货期，退货期结束后即符合发放条件。运营手动生成快照时自动筛选所有退货期满的码。
           </p>
           <div className="space-y-2 rounded-lg bg-red-50 p-3">
             <span className="font-medium text-red-800 text-xs">
@@ -155,9 +155,8 @@ export default function FlowPage() {
             <Node icon={Smartphone} label="推送到账通知" />
           </div>
           <p className="mt-2 text-muted-foreground text-xs">
-            参照返佣发放流程：默认每月 10
-            号发放，可手动调整。批次范围自动衔接，不重叠。生成快照后导出
-            CSV，手动完成链上转账后上传 CSV 回填 TX hash。
+            参照返佣发放流程：一键生成快照筛选所有退货期满的码，纳入后状态变为「发放中」不会重复。导出
+            CSV 手动链上打款后上传 CSV 回填 TX hash。
           </p>
         </div>
 
@@ -178,6 +177,10 @@ export default function FlowPage() {
                 待发放
               </span>
               <span className="text-muted-foreground">→</span>
+              <span className="rounded-full bg-indigo-100 px-2.5 py-1 font-medium text-indigo-800">
+                发放中
+              </span>
+              <span className="text-muted-foreground">→</span>
               <span className="rounded-full bg-green-100 px-2.5 py-1 font-medium text-green-800">
                 已发放
               </span>
@@ -196,8 +199,8 @@ export default function FlowPage() {
               </span>
             </div>
             <p className="mt-1 text-muted-foreground text-xs">
-              等待中：30 天退货期内 · 待发放：退货期满，等待运营快照发放 ·
-              已发放：CSV 上传确认后
+              等待中：30 天退货期内 · 待发放：退货期满 · 发放中：已纳入快照 ·
+              已发放：CSV 上传确认
             </p>
           </div>
         </div>

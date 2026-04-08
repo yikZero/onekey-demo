@@ -51,7 +51,7 @@ const DASHBOARD_PROMPT = `你是一个全栈工程师，现在需要实现 OneKe
 ## 背景
 OneKey 大促活动赠送等额 BTC，运营后台用于管理活动、兑换码、兑换记录和发放。
 不关联 Shopify 优惠码，不区分订单码/自由码，所有码统一管理。
-发放参照返佣流程：默认每月 10 号，可手动调整。批次范围自动衔接不重叠。30 天退货期满后纳入快照 → 导出 CSV → 手动打款 → 上传 CSV 回填 TX hash。
+发放参照返佣流程：运营手动生成快照，一键筛选所有退货期满的待发放码（防重靠状态变更）。导出 CSV → 手动打款 → 上传 CSV 回填 TX hash。
 
 ## 页面一：活动管理
 
@@ -115,7 +115,7 @@ XXXX-XXXX-XXXX-XXXX（16 位 Base32，约 80 位熵）
 码状态流转：
 - 未使用 -> 等待中（用户兑换后，30 天退货期内）
 - 等待中 -> 待发放（退货期满，等待运营发放）
-- 待发放 -> 已发放（快照后上传 CSV 确认）
+- 待发放 -> 发放中（纳入快照后）-> 已发放（上传 CSV 确认）
 - 等待中/待发放 -> 已拒绝（人工拒绝）
 - 未使用 -> 已作废（运营主动作废，不可恢复）
 
@@ -143,19 +143,24 @@ XXXX-XXXX-XXXX-XXXX（16 位 Base32，约 80 位熵）
 
 ## 页面三：发放管理
 
-### 发放周期列表
-默认每月 10 号发放，可手动调整日期。批次范围自动衔接上一批次结束日期，不重叠。参照返佣发放流程。
-
-| 功能 | 说明 |
-|------|------|
-| 快照 | 运营手动生成当期符合条件的待发放码快照 |
-| 导出 CSV | 导出待发放列表（兑换码、收款地址、cbBTC 数量、USD 金额） |
-| 上传 CSV | 手动打款后，上传包含 TX hash 的 CSV，批量更新状态为"已发放" |
-
-### 发放条件
-- 兑换提交时间 + 30 天 ≤ 快照日期（即退货期已满）
-- 状态为"待发放"
+### 快照列表
+运营手动点击「生成快照」，系统自动筛选所有符合条件的码并锁定：
+- 状态为「待发放」（pendingPayout）：即兑换提交 + 30 天 ≤ 当前日期
 - 未被人工拒绝
+- 未被之前快照纳入（防重靠状态变更：纳入快照后码状态变为「发放中」）
+
+| 列 | 说明 |
+|----|------|
+| 快照编号 | 自增 #1, #2, #3... |
+| 快照时间 | 生成快照的日期 |
+| 发放日期 | 默认当月 10 号，可手动调整 |
+| 纳入数量 | 本次快照纳入的码数量 |
+| 总金额 (USD) | |
+| 总 cbBTC | |
+| 状态 | 待处理 / 已完成 |
+| 操作 | 导出 CSV / 上传 CSV（回填 TX hash） |
+
+无需手动设定时间范围，无需批次名称。
 
 ## 客户端兑换流程（供后端接口设计参考）
 
@@ -168,8 +173,8 @@ XXXX-XXXX-XXXX-XXXX（16 位 Base32，约 80 位熵）
 所有码均需关联订单。活动赠码等场景由后端预关联固定订单，用户无需手动输入。
 
 ## 关键业务逻辑
-- 发放时间：默认每月 10 号，可手动调整，参照返佣流程，快照 → 导出 CSV → 手动打款 → 上传 CSV 回填 TX hash
-- 发放条件：兑换提交 30 天退货期满后纳入发放，批次范围自动衔接不重叠
+- 发放方式：运营手动生成快照 → 导出 CSV → 手动打款 → 上传 CSV 回填 TX hash
+- 发放条件：30 天退货期满 + 状态为「待发放」+ 未被之前快照纳入（防重靠状态变更）
 - 兑换码格式：XXXX-XXXX-XXXX-XXXX（16 位 Base32），可选自定义前 4 位
 - 兑换码有效期：默认 1 年，从生成时间起算
 - 订单关联：所有码均需关联订单，活动赠码由后端预关联固定订单
@@ -330,6 +335,10 @@ const STATUS_CONFIG = {
     label: '待发放',
     className: 'bg-blue-100 text-blue-800',
   },
+  snapshotted: {
+    label: '发放中',
+    className: 'bg-indigo-100 text-indigo-800',
+  },
   completed: { label: '已发放', className: 'bg-green-100 text-green-800' },
   rejected: { label: '已拒绝', className: 'bg-red-100 text-red-800' },
   voided: {
@@ -338,12 +347,10 @@ const STATUS_CONFIG = {
   },
 }
 
-const MOCK_PAYOUTS = [
+const MOCK_SNAPSHOTS = [
   {
     id: 1,
-    name: '4 月第 1 批',
-    rangeStart: '2026-03-01',
-    rangeEnd: '2026-03-31',
+    snapshotDate: '2026-04-10',
     payoutDate: '2026-04-10',
     total: 156,
     totalUsd: 4280,
@@ -353,9 +360,7 @@ const MOCK_PAYOUTS = [
   },
   {
     id: 2,
-    name: '5 月第 1 批',
-    rangeStart: '2026-04-01',
-    rangeEnd: '2026-04-30',
+    snapshotDate: '2026-05-10',
     payoutDate: '2026-05-12',
     total: 203,
     totalUsd: 5890,
@@ -978,6 +983,7 @@ export default function DashboardPage() {
                   <SelectItem value="未使用">未使用</SelectItem>
                   <SelectItem value="等待中">等待中</SelectItem>
                   <SelectItem value="待发放">待发放</SelectItem>
+                  <SelectItem value="发放中">发放中</SelectItem>
                   <SelectItem value="已发放">已发放</SelectItem>
                   <SelectItem value="已拒绝">已拒绝</SelectItem>
                   <SelectItem value="已作废">已作废</SelectItem>
@@ -1101,52 +1107,42 @@ export default function DashboardPage() {
               <div>
                 <h2 className="font-semibold text-lg">发放管理</h2>
                 <p className="text-muted-foreground text-sm">
-                  默认每月 10
-                  号发放，可手动调整。创建批次时自动衔接上一批次的结束时间，范围不重叠。
+                  一键生成快照，筛选所有退货期满的待发放码。纳入快照后码状态变为「发放中」，不会被重复快照。
                 </p>
               </div>
               <Dialog>
                 <DialogTrigger className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 font-medium text-primary-foreground text-sm hover:bg-primary/90">
-                  <Plus className="size-3.5" />
-                  新建发放批次
+                  <Calendar className="size-3.5" />
+                  生成快照
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-sm">
                   <DialogHeader>
-                    <DialogTitle>新建发放批次</DialogTitle>
+                    <DialogTitle>生成发放快照</DialogTitle>
                     <DialogDescription>
-                      系统自动衔接上一批次结束日期，避免范围重叠。筛选该范围内
-                      30 天退货期已满的待发放码。
+                      系统将自动筛选所有符合条件的码，纳入后状态变为「发放中」，不会被重复快照。
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-3">
-                    <div className="grid gap-1.5">
-                      <span className="font-medium text-sm">批次名称</span>
-                      <Input
-                        placeholder="如：6 月第 1 批"
-                        defaultValue="6 月第 1 批"
-                      />
-                    </div>
-                    <div className="grid gap-1.5">
-                      <span className="font-medium text-sm">
-                        兑换时间范围（筛选条件）
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="date"
-                          className="flex-1"
-                          defaultValue="2026-05-01"
-                        />
-                        <span className="text-muted-foreground text-sm">~</span>
-                        <Input
-                          type="date"
-                          className="flex-1"
-                          defaultValue="2026-05-31"
-                        />
+                    <div className="rounded-lg border bg-muted/30 p-3">
+                      <div className="mb-1 text-muted-foreground text-xs">
+                        筛选条件
                       </div>
-                      <p className="text-muted-foreground text-xs">
-                        自动从上一批次结束日期 (2026-04-30)
-                        的次日开始，可手动调整
-                      </p>
+                      <ul className="space-y-0.5 text-sm">
+                        <li>· 30 天退货期已满</li>
+                        <li>· 状态为「待发放」</li>
+                        <li>· 未被之前快照纳入</li>
+                      </ul>
+                    </div>
+                    <div className="rounded-lg border bg-primary/5 p-3 text-center">
+                      <div className="text-muted-foreground text-xs">
+                        当前符合条件
+                      </div>
+                      <div className="font-bold text-2xl text-primary">
+                        87 笔
+                      </div>
+                      <div className="text-muted-foreground text-xs">
+                        共 $2,340.00
+                      </div>
                     </div>
                     <div className="grid gap-1.5">
                       <span className="font-medium text-sm">发放日期</span>
@@ -1156,38 +1152,29 @@ export default function DashboardPage() {
                         defaultValue="2026-06-10"
                       />
                       <p className="text-muted-foreground text-xs">
-                        默认为范围结束月份的次月 10 号，可手动调整
+                        默认当月 10 号，可手动调整
                       </p>
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button>创建并生成快照</Button>
+                    <DialogClose render={<Button variant="outline" />}>
+                      取消
+                    </DialogClose>
+                    <Button>确认生成快照</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
             </div>
 
-            {/* 发放条件说明 */}
-            <div className="rounded-lg border bg-muted/30 p-4">
-              <div className="mb-2 font-medium text-sm">发放条件</div>
-              <ul className="space-y-1 text-muted-foreground text-sm">
-                <li>· 兑换提交时间 + 30 天 ≤ 快照日期（即 30 天退货期已满）</li>
-                <li>· 状态为「待发放」，未被人工拒绝</li>
-                <li>
-                  · 示例：4/8 兑换 → 5/8 退货期满 → 运营创建批次时即可纳入
-                </li>
-              </ul>
-            </div>
-
-            {/* 发放批次列表 */}
+            {/* 快照历史列表 */}
             <div className="rounded-lg border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>批次</TableHead>
-                    <TableHead>兑换时间范围</TableHead>
+                    <TableHead>快照编号</TableHead>
+                    <TableHead>快照时间</TableHead>
                     <TableHead>发放日期</TableHead>
-                    <TableHead className="text-right">待发放数</TableHead>
+                    <TableHead className="text-right">纳入数量</TableHead>
                     <TableHead className="text-right">总金额 (USD)</TableHead>
                     <TableHead className="text-right">总 cbBTC</TableHead>
                     <TableHead>状态</TableHead>
@@ -1195,38 +1182,35 @@ export default function DashboardPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {MOCK_PAYOUTS.map((payout) => (
-                    <TableRow key={payout.id}>
+                  {MOCK_SNAPSHOTS.map((snapshot) => (
+                    <TableRow key={snapshot.id}>
                       <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="size-4 text-muted-foreground" />
-                          {payout.name}
-                        </div>
+                        #{snapshot.id}
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-xs">
-                        {payout.rangeStart} ~ {payout.rangeEnd}
+                      <TableCell className="text-muted-foreground text-sm">
+                        {snapshot.snapshotDate}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {payout.payoutDate}
+                        {snapshot.payoutDate}
                       </TableCell>
                       <TableCell className="text-right font-mono">
-                        {payout.total}
+                        {snapshot.total}
                       </TableCell>
                       <TableCell className="text-right font-semibold">
-                        ${payout.totalUsd.toLocaleString()}
+                        ${snapshot.totalUsd.toLocaleString()}
                       </TableCell>
                       <TableCell className="text-right font-mono text-sm">
-                        {payout.totalBtc}
+                        {snapshot.totalBtc}
                       </TableCell>
                       <TableCell>
                         <span
                           className={`inline-block rounded-full px-2 py-0.5 font-medium text-[10px] ${
-                            payout.status === 'done'
+                            snapshot.status === 'done'
                               ? 'bg-green-100 text-green-800'
                               : 'bg-yellow-100 text-yellow-800'
                           }`}
                         >
-                          {payout.status === 'done' ? '已完成' : '待处理'}
+                          {snapshot.status === 'done' ? '已完成' : '待处理'}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
@@ -1239,7 +1223,7 @@ export default function DashboardPage() {
                             <FileSpreadsheet className="size-3" />
                             导出 CSV
                           </Button>
-                          {!payout.csvUploaded && (
+                          {!snapshot.csvUploaded && (
                             <Button size="sm" className="h-7 gap-1 text-xs">
                               <Upload className="size-3" />
                               上传 CSV
@@ -1258,11 +1242,11 @@ export default function DashboardPage() {
               <div className="mb-2 font-medium text-sm">发放流程</div>
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span className="rounded-lg bg-muted px-3 py-1.5">
-                  ① 手动生成快照
+                  ① 生成快照
                 </span>
                 <span className="text-muted-foreground">→</span>
                 <span className="rounded-lg bg-muted px-3 py-1.5">
-                  ② 导出待发放 CSV
+                  ② 导出 CSV
                 </span>
                 <span className="text-muted-foreground">→</span>
                 <span className="rounded-lg bg-muted px-3 py-1.5">
@@ -1270,11 +1254,11 @@ export default function DashboardPage() {
                 </span>
                 <span className="text-muted-foreground">→</span>
                 <span className="rounded-lg bg-muted px-3 py-1.5">
-                  ④ 上传含 TX hash 的 CSV
+                  ④ 上传 CSV 回填 TX hash
                 </span>
                 <span className="text-muted-foreground">→</span>
                 <span className="rounded-lg bg-muted px-3 py-1.5">
-                  ⑤ 系统更新状态 + 推送通知
+                  ⑤ 状态更新 + 推送通知
                 </span>
               </div>
             </div>
