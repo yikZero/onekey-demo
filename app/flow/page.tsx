@@ -120,15 +120,12 @@ export default function FlowPage() {
         <div className="rounded-xl border p-4">
           <div className="mb-3 flex items-center gap-2">
             <Clock className="size-4" />
-            <span className="font-semibold text-sm">
-              等待期（30 天退货期 + 次月 10 号）
-            </span>
+            <span className="font-semibold text-sm">等待期（30 天退货期）</span>
             <span className="text-muted-foreground text-xs">后端</span>
           </div>
           <p className="mb-3 text-muted-foreground text-xs">
-            兑换提交后进入 30 天退货期，退货期结束后的次月 10
-            号才符合发放条件。例如：4 月 8 日兑换 → 5 月 8 日退货期满 → 6 月 10
-            日发放。
+            兑换提交后进入 30
+            天退货期，退货期结束后即符合发放条件。运营可自行设定发放周期和范围，手动生成快照并发放。
           </p>
           <div className="space-y-2 rounded-lg bg-red-50 p-3">
             <span className="font-medium text-red-800 text-xs">
@@ -147,19 +144,19 @@ export default function FlowPage() {
         <div className="rounded-xl border p-4">
           <div className="mb-3 flex items-center gap-2">
             <Send className="size-4" />
-            <span className="font-semibold text-sm">每月 10 号手动发放</span>
+            <span className="font-semibold text-sm">手动发放</span>
             <span className="text-muted-foreground text-xs">运营</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Node icon={Calendar} label="10 号快照符合条件的码" />
+            <Node icon={Calendar} label="手动生成快照" />
             <Node icon={FileSpreadsheet} label="导出发放 CSV" />
             <Node icon={Send} label="手动打款 BTC" />
             <Node icon={Upload} label="上传已发放 CSV" />
             <Node icon={Smartphone} label="推送到账通知" />
           </div>
           <p className="mt-2 text-muted-foreground text-xs">
-            参照返佣发放流程：每月 10
-            号生成快照，导出待发放列表，手动完成链上转账后上传 CSV 更新状态。
+            参照返佣发放流程：运营自行设定发放周期，手动生成快照，导出待发放列表，手动完成链上转账后上传
+            CSV 更新状态。
           </p>
         </div>
 
@@ -198,7 +195,7 @@ export default function FlowPage() {
               </span>
             </div>
             <p className="mt-1 text-muted-foreground text-xs">
-              等待中：30 天退货期内 · 待发放：退货期满，等待次月 10 号快照发放 ·
+              等待中：30 天退货期内 · 待发放：退货期满，等待运营快照发放 ·
               已发放：CSV 上传确认后
             </p>
           </div>

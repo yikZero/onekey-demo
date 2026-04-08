@@ -51,7 +51,7 @@ const DASHBOARD_PROMPT = `你是一个全栈工程师，现在需要实现 OneKe
 ## 背景
 OneKey 大促活动赠送等额 BTC，运营后台用于管理活动、兑换码、兑换记录和发放。
 不关联 Shopify 优惠码，不区分订单码/自由码，所有码统一管理。
-发放参照返佣流程：每月 10 号，30 天退货期满后的次月 10 号快照 → 手动打款 → 上传 CSV。
+发放参照返佣流程：运营手动设定发放周期，30 天退货期满后即可纳入快照 → 手动打款 → 上传 CSV。
 
 ## 页面一：活动管理
 
@@ -114,8 +114,8 @@ XXXX-XXXX-XXXX-XXXX（16 位 Base32，约 80 位熵）
 
 码状态流转：
 - 未使用 -> 等待中（用户兑换后，30 天退货期内）
-- 等待中 -> 待发放（退货期满，等待次月 10 号）
-- 待发放 -> 已发放（10 号快照后上传 CSV 确认）
+- 等待中 -> 待发放（退货期满，等待运营发放）
+- 待发放 -> 已发放（快照后上传 CSV 确认）
 - 等待中/待发放 -> 已拒绝（人工拒绝）
 - 未使用 -> 已作废（运营主动作废，不可恢复）
 
@@ -131,7 +131,7 @@ XXXX-XXXX-XXXX-XXXX（16 位 Base32，约 80 位熵）
 | 锁定时 BTC 价格 | 始终显示 |
 | 状态 | 始终显示 |
 | 提交时间 | 始终显示 |
-| 预计发放日期 | 等待中/待发放时显示（退货期满后的次月 10 号） |
+| 预计发放日期 | 等待中/待发放时显示（退货期满后由运营设定） |
 | 实际发放时间 | 已发放时显示 |
 | 发放 TX hash | 已发放时显示，带区块链浏览器外链 |
 | 拒绝原因 | 已拒绝时显示 |
@@ -144,11 +144,11 @@ XXXX-XXXX-XXXX-XXXX（16 位 Base32，约 80 位熵）
 ## 页面三：发放管理
 
 ### 发放周期列表
-每月 10 号为一个发放周期。参照返佣发放流程。
+运营手动创建发放批次，自定义发放日期和范围。参照返佣发放流程。
 
 | 功能 | 说明 |
 |------|------|
-| 快照 | 10 号生成当期符合条件的待发放码快照 |
+| 快照 | 运营手动生成当期符合条件的待发放码快照 |
 | 导出 CSV | 导出待发放列表（兑换码、收款地址、cbBTC 数量、USD 金额） |
 | 上传 CSV | 手动打款后，上传包含 TX hash 的 CSV，批量更新状态为"已发放" |
 
@@ -168,8 +168,8 @@ XXXX-XXXX-XXXX-XXXX（16 位 Base32，约 80 位熵）
 所有码均需关联订单。活动赠码等场景由后端预关联固定订单，用户无需手动输入。
 
 ## 关键业务逻辑
-- 发放时间：每月 10 号，参照返佣流程，快照 → 导出 CSV → 手动打款 → 上传 CSV
-- 发放条件：兑换提交 30 天退货期满后的次月 10 号
+- 发放时间：运营手动设定，参照返佣流程，快照 → 导出 CSV → 手动打款 → 上传 CSV
+- 发放条件：兑换提交 30 天退货期满后即可纳入发放
 - 兑换码格式：XXXX-XXXX-XXXX-XXXX（16 位 Base32），可选自定义前 4 位
 - 兑换码有效期：默认 1 年，从生成时间起算
 - 订单关联：所有码均需关联订单，活动赠码由后端预关联固定订单
@@ -341,7 +341,10 @@ const STATUS_CONFIG = {
 const MOCK_PAYOUTS = [
   {
     id: 1,
-    period: '2026-04-10',
+    name: '4 月第 1 批',
+    rangeStart: '2026-03-01',
+    rangeEnd: '2026-03-31',
+    payoutDate: '2026-04-10',
     total: 156,
     totalUsd: 4280,
     totalBtc: '0.045632',
@@ -350,7 +353,10 @@ const MOCK_PAYOUTS = [
   },
   {
     id: 2,
-    period: '2026-05-10',
+    name: '5 月第 1 批',
+    rangeStart: '2026-04-01',
+    rangeEnd: '2026-04-30',
+    payoutDate: '2026-05-12',
     total: 203,
     totalUsd: 5890,
     totalBtc: '0.062814',
@@ -446,7 +452,7 @@ function RecordDetail({ record }: { record: (typeof MOCK_RECORDS)[0] }) {
               <div className="text-muted-foreground">预计发放日期</div>
               <span className="font-medium">{record.estimatedDate}</span>
               <span className="ml-1.5 text-muted-foreground text-xs">
-                （30 天退货期满后的次月 10 号）
+                （30 天退货期满后）
               </span>
             </div>
             <Dialog>
@@ -1095,10 +1101,47 @@ export default function DashboardPage() {
               <div>
                 <h2 className="font-semibold text-lg">发放管理</h2>
                 <p className="text-muted-foreground text-sm">
-                  每月 10 号生成快照，导出待发放 CSV，手动打款后上传 CSV
-                  更新状态。参照返佣发放流程。
+                  运营手动创建发放批次、设定范围，生成快照后导出 CSV
+                  手动打款，再上传 CSV 回填 TX hash。参照返佣发放流程。
                 </p>
               </div>
+              <Dialog>
+                <DialogTrigger className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 font-medium text-primary-foreground text-sm hover:bg-primary/90">
+                  <Plus className="size-3.5" />
+                  新建发放批次
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-sm">
+                  <DialogHeader>
+                    <DialogTitle>新建发放批次</DialogTitle>
+                    <DialogDescription>
+                      设定兑换时间范围，系统将筛选该范围内 30
+                      天退货期已满的待发放码。
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-3">
+                    <div className="grid gap-1.5">
+                      <span className="font-medium text-sm">批次名称</span>
+                      <Input placeholder="如：5 月第 1 批" />
+                    </div>
+                    <div className="grid gap-1.5">
+                      <span className="font-medium text-sm">
+                        兑换时间范围（筛选条件）
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Input type="date" className="flex-1" />
+                        <span className="text-muted-foreground text-sm">~</span>
+                        <Input type="date" className="flex-1" />
+                      </div>
+                      <p className="text-muted-foreground text-xs">
+                        筛选在此范围内兑换且 30 天退货期已满的码
+                      </p>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button>创建并生成快照</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
 
             {/* 发放条件说明 */}
@@ -1108,17 +1151,19 @@ export default function DashboardPage() {
                 <li>· 兑换提交时间 + 30 天 ≤ 快照日期（即 30 天退货期已满）</li>
                 <li>· 状态为「待发放」，未被人工拒绝</li>
                 <li>
-                  · 示例：4 月 8 日兑换 → 5 月 8 日退货期满 → 6 月 10 日发放
+                  · 示例：4/8 兑换 → 5/8 退货期满 → 运营创建批次时即可纳入
                 </li>
               </ul>
             </div>
 
-            {/* 发放周期列表 */}
+            {/* 发放批次列表 */}
             <div className="rounded-lg border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>发放周期</TableHead>
+                    <TableHead>批次</TableHead>
+                    <TableHead>兑换时间范围</TableHead>
+                    <TableHead>发放日期</TableHead>
                     <TableHead className="text-right">待发放数</TableHead>
                     <TableHead className="text-right">总金额 (USD)</TableHead>
                     <TableHead className="text-right">总 cbBTC</TableHead>
@@ -1132,8 +1177,14 @@ export default function DashboardPage() {
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           <Calendar className="size-4 text-muted-foreground" />
-                          {payout.period}
+                          {payout.name}
                         </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-xs">
+                        {payout.rangeStart} ~ {payout.rangeEnd}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {payout.payoutDate}
                       </TableCell>
                       <TableCell className="text-right font-mono">
                         {payout.total}
@@ -1157,16 +1208,6 @@ export default function DashboardPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                          {!payout.csvUploaded && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 gap-1 text-xs"
-                            >
-                              <Calendar className="size-3" />
-                              生成快照
-                            </Button>
-                          )}
                           <Button
                             variant="outline"
                             size="sm"
@@ -1194,7 +1235,7 @@ export default function DashboardPage() {
               <div className="mb-2 font-medium text-sm">发放流程</div>
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span className="rounded-lg bg-muted px-3 py-1.5">
-                  ① 10 号生成快照
+                  ① 手动生成快照
                 </span>
                 <span className="text-muted-foreground">→</span>
                 <span className="rounded-lg bg-muted px-3 py-1.5">

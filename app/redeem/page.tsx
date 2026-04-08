@@ -429,7 +429,7 @@ export default function RedeemPage() {
                           <span className="text-muted-foreground">
                             预计发放
                           </span>
-                          <span>2026-06-10（次月 10 号）</span>
+                          <span>30 天退货期满后发放</span>
                         </div>
                       </CardContent>
                     </Card>
@@ -461,7 +461,7 @@ export default function RedeemPage() {
                     </p>
                     <Card className="w-full">
                       <CardContent className="p-3 text-center text-muted-foreground text-xs">
-                        <p>30 天退货期满后，次月 10 号统一发放</p>
+                        <p>30 天退货期满后统一发放</p>
                         <p>可在兑换历史中随时查看进度</p>
                       </CardContent>
                     </Card>
