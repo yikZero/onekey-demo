@@ -45,6 +45,25 @@ export default function FlowPage() {
       <NavHeader />
 
       <main className="mx-auto max-w-xl px-6 py-8">
+        {/* Title + Jira */}
+        <div className="mb-6">
+          <h1 className="font-bold text-2xl">OneKey BTC 奖励兑换系统</h1>
+          <p className="mt-1.5 text-muted-foreground text-sm">
+            从 2026 年中大促开始，OneKey 促销不再打折，改为赠送等额
+            BTC。用户购买硬件钱包后，通过包装内的兑换码（类似礼品卡）在 OneKey
+            App 中领取等值 cbBTC 奖励。
+          </p>
+          <a
+            href="https://onekeyhq.atlassian.net/browse/OK-43996"
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-flex items-center gap-1.5 text-primary text-sm hover:underline"
+          >
+            OK-43996
+            <span className="text-muted-foreground text-xs">Jira</span>
+          </a>
+        </div>
+
         {/* Phase 1: 创建活动 */}
         <div className="rounded-xl border p-4">
           <div className="mb-3 flex items-center gap-2">
