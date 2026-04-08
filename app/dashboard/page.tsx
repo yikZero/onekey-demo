@@ -131,7 +131,7 @@ XXXX-XXXX-XXXX-XXXX（16 位 Base32，约 80 位熵）
 | 锁定时 BTC 价格 | 始终显示 |
 | 状态 | 始终显示 |
 | 提交时间 | 始终显示 |
-| 预计发放日期 | 等待中/待发放时显示（退货期满后由运营设定） |
+| 预计发放日期 | 等待中/待发放时显示（退货期满后等待运营快照） |
 | 实际发放时间 | 已发放时显示 |
 | 发放 TX hash | 已发放时显示，带区块链浏览器外链 |
 | 拒绝原因 | 已拒绝时显示 |
@@ -153,7 +153,7 @@ XXXX-XXXX-XXXX-XXXX（16 位 Base32，约 80 位熵）
 |----|------|
 | 快照编号 | 自增 #1, #2, #3... |
 | 快照时间 | 生成快照的日期 |
-| 发放日期 | 默认当月 10 号，可手动调整 |
+| 快照时间 | 生成快照的日期 |
 | 纳入数量 | 本次快照纳入的码数量 |
 | 总金额 (USD) | |
 | 总 cbBTC | |
@@ -351,7 +351,6 @@ const MOCK_SNAPSHOTS = [
   {
     id: 1,
     snapshotDate: '2026-04-10',
-    payoutDate: '2026-04-10',
     total: 156,
     totalUsd: 4280,
     totalBtc: '0.045632',
@@ -361,7 +360,6 @@ const MOCK_SNAPSHOTS = [
   {
     id: 2,
     snapshotDate: '2026-05-10',
-    payoutDate: '2026-05-12',
     total: 203,
     totalUsd: 5890,
     totalBtc: '0.062814',
@@ -1144,17 +1142,6 @@ export default function DashboardPage() {
                         共 $2,340.00
                       </div>
                     </div>
-                    <div className="grid gap-1.5">
-                      <span className="font-medium text-sm">发放日期</span>
-                      <Input
-                        type="date"
-                        className="w-44"
-                        defaultValue="2026-06-10"
-                      />
-                      <p className="text-muted-foreground text-xs">
-                        默认当月 10 号，可手动调整
-                      </p>
-                    </div>
                   </div>
                   <DialogFooter>
                     <DialogClose render={<Button variant="outline" />}>
@@ -1173,7 +1160,6 @@ export default function DashboardPage() {
                   <TableRow>
                     <TableHead>快照编号</TableHead>
                     <TableHead>快照时间</TableHead>
-                    <TableHead>发放日期</TableHead>
                     <TableHead className="text-right">纳入数量</TableHead>
                     <TableHead className="text-right">总金额 (USD)</TableHead>
                     <TableHead className="text-right">总 cbBTC</TableHead>
@@ -1189,9 +1175,6 @@ export default function DashboardPage() {
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
                         {snapshot.snapshotDate}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {snapshot.payoutDate}
                       </TableCell>
                       <TableCell className="text-right font-mono">
                         {snapshot.total}
